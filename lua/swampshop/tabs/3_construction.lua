@@ -265,3 +265,41 @@ SS_Product({
 --         end)
 --     end
 -- })
+
+
+SS_Heading("Defense")
+
+SS_Product({
+    class = 'prop_autoturret',
+    price = 1000,
+    name = 'Auto Turret',
+    description = "Automatically shoots anything in front of it. Needs to be refilled with ammo. Can Carry up to 800 Rounds",
+    model = 'models/weapons/w_irifle.mdl',
+    CannotBuy = CannotBuyTrash,
+    OnBuy = function(self, ply)
+        local e = ents.Create("prop_autoturret")
+        local pos = ply:GetPos() + (Vector(ply:GetAimVector().x, ply:GetAimVector().y, 0):GetNormalized() * 50) + Vector(0, 0, 10)
+        e:SetPos(pos)
+        e:SetAngles(Angle(0, math.random(0, 360), 0))
+        e:Spawn()
+        e:Activate()
+
+    end
+})
+
+SS_Product({
+    class = 'autoturret_ammo',
+    price = 2000,
+    name = 'Auto Turret Ammo x50',
+    description = "Drop it on an Auto Turret to fill its Ammo by 50",
+    model = 'models/items/boxmrounds.mdl',
+    CannotBuy = CannotBuyTrash,
+    OnBuy = function(self, ply)
+        local e = ents.Create("autoturret_ammo")
+        local pos = ply:GetPos() + (Vector(ply:GetAimVector().x, ply:GetAimVector().y, 0):GetNormalized() * 50) + Vector(0, 0, 10)
+        e:SetPos(pos)
+        e:SetAngles(Angle(0, math.random(0, 360), 0))
+        e:Spawn()
+        e:Activate()
+    end
+})
