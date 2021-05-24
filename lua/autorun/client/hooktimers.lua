@@ -82,11 +82,16 @@ timer.Simple(2, function()
 	end
 	DiscordTry(6463, callback)
 end) ]]
-
 timer.Simple(1, function()
     net.Start("setcntry")
     net.WriteString(string.lower(system.GetCountry()))
     net.SendToServer()
+end)
+
+hook.Add("RenderScreenspaceEffects", "FishEyeEffect", function()
+    if IsValid(LocalPlayer()) and LocalPlayer():WaterLevel() == 3 then
+        DrawMaterialOverlay("effects/water_warp01", -0.1)
+    end
 end)
 
 hook.Add("DrawTranslucentAccessories", "DrawSpacehat", function(ply)
@@ -481,6 +486,14 @@ local function DrawName(ply, opacityScale)
     cam.Start3D2D(pos, Angle(0, ang.y, 90), 0.15)
     -- render.OverrideDepthEnable(false, true)
     DrawTheaterText(name, "3D2DName", 65, 0, Color(255, 255, 255, opacity))
+    local ch = ply:TypingChars()
+    local chy = 58
+
+    while ch > 0 do
+        DrawTheaterText(string.rep("•", math.min(ch, 50), ""), "DebugFixed", 75, chy, Color(255, 255, 255, opacity))
+        chy = chy + 6
+        ch = ch - 50
+    end
 
     if ply:IsAFK() then
         DrawTheaterText("[AFK]", "TheaterDermaLarge", 70, 70, Color(255, 255, 255, opacity))
