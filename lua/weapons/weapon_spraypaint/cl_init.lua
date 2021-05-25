@@ -134,7 +134,7 @@ end
 
 SpraypaintMenu = nil
 SPRAYPAINT_DECALPREVIEW_CACHE = {}
-
+SPRAYPAINT_DECALPREVIEW_KEY = "_"..math.random(1,100000).."_spraypreviewmat"
 function SWEP:GetPreviewMat(decal)
     local ply = self:GetOwner()
     decal = decal or self:GetCurrentDecal()
@@ -142,9 +142,11 @@ function SWEP:GetPreviewMat(decal)
     if (not decalmat) then return Material("___error") end
     local mat = Material(decalmat) --let's create a new material
     if (not mat or (mat and mat:IsError())) then return Material("___error") end
+    if (mat:GetName() != decalmat) then return Material("___error") end
 
     if (SPRAYPAINT_DECALPREVIEW_CACHE[decal] == nil) then
         local t = mat:GetString("$basetexture")
+        print(t," is the texture for "..decalmat)
         local f = mat:GetFloat("$frame")
         local sc = mat:GetFloat("$decalscale")
         local c = mat:GetVector("$color2")
@@ -169,7 +171,8 @@ function SWEP:GetPreviewMat(decal)
         params["$vertexcolor"] = 1
         params["$vertexalpha"] = 1
         params["$decalscale"] = sc
-        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. "decalpreviewmat", shader, params)
+        print("generated preview material for",decal, "using "..t)
+        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. SPRAYPAINT_DECALPREVIEW_KEY, shader, params)
     end
 
     return SPRAYPAINT_DECALPREVIEW_CACHE[decal]
