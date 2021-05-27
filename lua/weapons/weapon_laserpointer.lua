@@ -9,6 +9,9 @@ SWEP.SlotPos = 100
 SWEP.Spawnable = true
 SWEP.ViewModel = Model("models/brian/laserpointer.mdl")
 SWEP.WorldModel = Model("models/brian/laserpointer.mdl")
+
+SWEP.Damage = 1 --damage to inflict on high power mode
+SWEP.BeamBatteryCost = 4
 SWEP.Primary.ClipSize = -1
 SWEP.Primary.DefaultClip = 1000
 SWEP.Primary.Automatic = true
@@ -76,6 +79,8 @@ end
 function SWEP:Initialize()
     ---self:SetHoldType( "pistol" )
     self:SetHoldType("knife")
+    self.IsLaserPointer = true
+    lpointer_laser_source[self] = true
 end
 
 function SWEP:SetupDataTables()
@@ -83,6 +88,8 @@ function SWEP:SetupDataTables()
     self:NetworkVar("Bool", 1, "BeamMode")
     self:NetworkVar("Vector", 0, "CustomColor")
 end
+
+SWEP.IsLaserPointer = true
 
 hook.Add("NetworkEntityCreated", "LaserPointerFind", function(ent)
     if ent:GetClass() == "weapon_laserpointer" then
@@ -126,10 +133,12 @@ function SWEP:Reload()
     return true
 end
 
+
+
 hook.Add("KeyPress", "LaserColorPicker", function(ply, key)
     local wep = ply:GetActiveWeapon()
 
-    if (key == IN_RELOAD and IsValid(wep) and wep:GetClass() == "weapon_laserpointer") then
+    if (key == IN_RELOAD and IsValid(wep) and wep.IsLaserPointer) then
         if (SERVER) then
             ply:SendLua("CustomLaserOpenPanel()")
         end
@@ -139,7 +148,7 @@ end)
 hook.Add("KeyRelease", "LaserColorPicker", function(ply, key)
     local wep = ply:GetActiveWeapon()
 
-    if (key == IN_ATTACK2 and IsValid(wep) and wep:GetClass() == "weapon_laserpointer") then
+    if (key == IN_ATTACK2 and IsValid(wep) and wep.IsLaserPointer) then
         if (wep.LastRightClick) then
             wep.LastRightClick = nil
             wep:ButtonSound(false)
@@ -192,13 +201,13 @@ function SWEP:PrimaryAttack()
     local take = 1
 
     if (self:GetBeamMode()) then
-        take = 4
+        take = self.BeamBatteryCost
     end
 
     self:SetBattery(math.max(self:GetBattery() - take, 0))
 
     if (self:GetBeamMode()) then
-        LaserPointer_SVBeam(ply, self, ply:EyePos(), ply:GetAimVector())
+        self:SVBeam(ply, ply:EyePos(), ply:GetAimVector())
     end
 
     timer.Create(self:EntIndex() .. "LaserPointerOff", 0.3 + FrameTime(), 1, function()
@@ -215,7 +224,7 @@ hook.Add("KeyRelease", "LaserPointerReleaseCheck", function(ply, key)
     if (key == IN_ATTACK) then
         local pointer = ply:GetActiveWeapon()
 
-        if (IsValid(pointer) and pointer:GetClass() == "weapon_laserpointer" and pointer:GetOnState() == true) then
+        if (IsValid(pointer) and pointer.IsLaserPointer and pointer:GetOnState() == true) then
             pointer:SetOnState(false)
             pointer:SetNextPrimaryFire(CurTime() + 0.2)
             pointer:ButtonSound(false)
@@ -261,14 +270,14 @@ end
 
 lpointer_laser_source = lpointer_laser_source or {}
 
-function LaserPointer_DrawBeam(ply, wep, origin, dir, color, phase, startoverride)
-    if (not CLIENT or not IsValid(ply) or not IsValid(wep) or origin == nil or dir == nil or color == nil) then return end
+function SWEP:DrawBeam(ply, origin, dir, color, phase, startoverride)
+    if (not CLIENT or not IsValid(ply) or not IsValid(self) or origin == nil or dir == nil or color == nil) then return end
     phase = phase or 0
     if (phase >= 15) then return end
     local trace = {}
     trace.start = origin
     trace.endpos = origin + (dir * 60000)
-    trace.mask = wep.LaserMask
+    trace.mask = self.LaserMask
 
     if (phase == 0) then
         trace.filter = ply
@@ -276,7 +285,7 @@ function LaserPointer_DrawBeam(ply, wep, origin, dir, color, phase, startoverrid
 
     local bigstart = false
     local basesize = 8
-    local beammode = wep:GetBeamMode()
+    local beammode = self:GetBeamMode()
 
     if (beammode) then
         basesize = 12
@@ -345,7 +354,7 @@ function LaserPointer_DrawBeam(ply, wep, origin, dir, color, phase, startoverrid
         if (reflect) then
             local newstart = tr.HitPos
             local dir3 = tr.Normal - 2 * tr.Normal:Dot(tr.HitNormal) * tr.HitNormal
-            LaserPointer_DrawBeam(ply, wep, newstart, dir3, color, phase + 1, nil)
+            self:DrawBeam(ply, newstart, dir3, color, phase + 1, nil)
         else
             --put the above 4 lines in else for if(reflect) if you want it to only place a dot on the end
             local viewnormal = (EyePos() - beamend):GetNormal()
@@ -357,15 +366,16 @@ function LaserPointer_DrawBeam(ply, wep, origin, dir, color, phase, startoverrid
     end
 end
 
--- for damagenot
-function LaserPointer_SVBeam(ply, wep, origin, dir, phase)
-    if (not SERVER or not IsValid(ply) or not IsValid(wep) or origin == nil or dir == nil) then return end
+-- for damagenot 
+function SWEP:SVBeam(ply, origin, dir, phase)
+
+    if (not SERVER or not IsValid(ply) or not IsValid(self) or origin == nil or dir == nil) then return end
     phase = phase or 0
     if (phase >= 15) then return end
     local trace = {}
     trace.start = origin
     trace.endpos = origin + (dir * 60000)
-    trace.mask = wep.LaserMask
+    trace.mask = self.LaserMask
 
     if (phase == 0) then
         trace.filter = ply
@@ -374,7 +384,7 @@ function LaserPointer_SVBeam(ply, wep, origin, dir, phase)
     local tr = util.TraceLine(trace)
 
     if (tr.HitSky and (math.random(1, 10000) == 1)) then
-        wep:MakePlane(tr.HitPos + (origin - tr.HitPos):GetNormal() * 1000, ply:GetPos())
+        self:MakePlane(tr.HitPos + (origin - tr.HitPos):GetNormal() * 1000, ply:GetPos())
     end
 
     if (tr.HitWorld or tr.Hit) then
@@ -383,14 +393,14 @@ function LaserPointer_SVBeam(ply, wep, origin, dir, phase)
         if (reflect) then
             local newstart = tr.HitPos
             local dir3 = tr.Normal - 2 * tr.Normal:Dot(tr.HitNormal) * tr.HitNormal
-            LaserPointer_SVBeam(ply, wep, newstart, dir3, phase + 1)
+            self:SVBeam(ply, newstart, dir3, phase + 1)
         else
             if (IsValid(tr.Entity) and tr.Entity.Health ~= nil) then
                 if (Safe == nil or (isfunction(Safe) and not Safe(tr.Entity))) then
                     local d = DamageInfo()
-                    d:SetDamage(1)
+                    d:SetDamage(self.Damage)
                     d:SetAttacker(ply)
-                    d:SetInflictor(wep)
+                    d:SetInflictor(self)
                     d:SetDamageType(DMG_DISSOLVE)
                     tr.Entity:TakeDamageInfo(d)
                 end
@@ -407,7 +417,7 @@ hook.Add("PostDrawTranslucentRenderables", "laserhook", function(depth, sky)
         for wep, _ in next, lpointer_laser_source do
             local ply = wep:GetOwner()
             if (not IsValid(ply)) then continue end
-            if (wep:GetClass() ~= "weapon_laserpointer") then continue end
+            if (!wep.IsLaserPointer) then continue end
             if (not IsValid(wep)) then continue end
             if (wep ~= ply:GetActiveWeapon()) then continue end
             if (not wep:GetOnState()) then continue end
@@ -434,7 +444,7 @@ hook.Add("PostDrawTranslucentRenderables", "laserhook", function(depth, sky)
             end
 
             render.SetMaterial(laser_material)
-            LaserPointer_DrawBeam(ply, wep, ply:EyePos(), ply:GetAimVector(), color, nil, beamstart, wep:GetBeamMode())
+            wep:DrawBeam(ply, ply:EyePos(), ply:GetAimVector(), color, nil, beamstart)
         end
     end
 end)
@@ -756,7 +766,7 @@ if CLIENT then
     CreateConVar("cl_customlasercolor", "0.35 0 1.0", FCVAR_ARCHIVE, "The value is a Vector - so between 0-1 - not between 0-255")
     CustomLaserFrame = nil
 
-    function CustomLaserOpenPanel()
+    function SWEP:CustomLaserOpenPanel()
         if IsValid(CustomLaserFrame) then return end
         local Frame = vgui.Create("DFrame")
         Frame:SetSize(320, 240) --good size for example
@@ -802,11 +812,14 @@ else
     util.AddNetworkString("LaserUpdateCustomColor")
 
     net.Receive("LaserUpdateCustomColor", function(len, ply)
-        if not ply:HasWeapon("weapon_laserpointer") then return end
         if ((ply.LastLaserPointerCustomization or 0) + 1) > CurTime() then return end
         ply.LastLaserPointerCustomization = CurTime()
         local vec = net.ReadVector()
-        ply:GetWeapon("weapon_laserpointer"):UpdateCustomColor(vec)
+        for k, v in pairs(ply:GetWeapons())do
+            if(v.IsLaserPointer)then
+                v:UpdateCustomColor(vec)
+            end
+        end
     end)
 
     function SWEP:OwnerChanged()
