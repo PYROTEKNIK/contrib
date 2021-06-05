@@ -1,0 +1,10 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models/pyroteknik/holo"
+	"$translucent" "1"
+	"$additive" "1"
+	"$color2" "[32 32 32]"
+	"$nodecal" "1"
+
+}
+ 

@@ -1,0 +1,26 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models/pyroteknik/booster_diffuse"
+	"$bumpmap" "models/pyroteknik/booster_normal"
+	"$blendtintbybasealpha" "1"
+	"$basemapluminancephongmask" "1"
+	"$surfaceprop" "metal"
+	"$phong" "1"
+	"$phongboost" "512"
+	"$phongalbedotint" "1"
+	"$phongexponent" "16"
+	"$phongexponenttexture" "models/pyroteknik/booster_exp"
+	"$phongfresnelranges"	"[0 0.5 1]"
+	   "$colorsave" "[1 1 1]"
+	    "$colorconstant" "[1 1 1]"
+	   "$colorconstant2" "[0.01 0.01 0.01]"
+	   Proxies
+	   {  
+			Equals
+			{
+				srcVar1 "$colorconstant"
+				resultVar "$color"
+			} 
+	   }
+}
+ 
