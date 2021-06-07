@@ -1,5 +1,10 @@
 ﻿-- This file is subject to copyright - contact swampservers@gmail.com for more information.
 -- INSTALL: CINEMA
+
+function IsChairEntity()
+return false
+end
+
 AddCSLuaFile()
 DEFINE_BASECLASS("prop_trash")
 ENT.Spawnable = true 
@@ -8,14 +13,17 @@ ENT.Category = "Special Trash"
 ENT.RenderGroup = RENDERGROUP_BOTH
 function ENT:Initialize()
     if(SERVER)then
-    self:SetModel("models/weapons/w_irifle.mdl")
-    self:PhysicsInit(SOLID_VPHYSICS)
+    self:SetModel("models/airboatgun.mdl")
+    local box = Vector(50,10,10)
+    self:PhysicsInitBox(-box/2,box/2) --this model doesn't have a collision model so you should probably let it slide this time.
+    self:GetPhysicsObject():SetMaterial("weapon")
     self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetAmmo(0)
     end
 end
 
 function ENT:SetupDataTables()
+    self:NetworkVar("Bool",0,"Taped")
 self:NetworkVar("Int",0,"Ammo")
 end
 
@@ -30,6 +38,14 @@ end
 function ENT:HasAmmo()
     return self:GetAmmo() > 0
 end
+function ENT:IsUnTaped()
+    return !self:IsTaped()
+
+end
+function ENT:IsTaped()
+    return self:GetTaped()
+
+end
 
 function ENT:CanShoot()
     if(!self:HasAmmo())then return false end
@@ -40,7 +56,7 @@ end
 function ENT:GetTrace()
 local tr = {}
 tr.start = self:GetPos()
-tr.endpos = tr.start + self:GetForward()*-1000
+tr.endpos = tr.start + self:GetForward()*1000
 tr.filter = self
 local trace = util.TraceLine(tr)
 return trace
@@ -80,11 +96,11 @@ function ENT:Draw()
 end
 
 function ENT:DrawTranslucent()
-    if(!self:CanShoot())then return end
+
     local trace = self:GetTrace()
     render.SetMaterial(beam_material)
-    render.DrawBeam(trace.StartPos, trace.HitPos, 4, 0.5, Lerp(trace.Fraction,0.5,0.5), Color(255,0,0,255))
-    render.DrawBeam(trace.StartPos, trace.HitPos, 2, 0.5, Lerp(trace.Fraction,0.5,0.5), Color(255,255,255,255))
+    --render.DrawBeam(trace.StartPos, trace.HitPos, 4, 0.5, Lerp(trace.Fraction,0.5,0.5), Color(255,0,0,255))
+    --render.DrawBeam(trace.StartPos, trace.HitPos, 2, 0.5, Lerp(trace.Fraction,0.5,0.5), Color(255,255,255,255))
     if(trace.Hit)then
         local viewnormal = (EyePos()-trace.HitPos ):GetNormalized()
         render.SetMaterial(laser_material)
@@ -98,6 +114,7 @@ end
 
 function ENT:Think()
     if(SERVER)then
+        self:SetTaped(!self:GetPhysicsObject():IsMotionEnabled())
     local trace = self:GetTrace()
     if(trace.Hit and trace.Entity:Health() > 0)then
 
