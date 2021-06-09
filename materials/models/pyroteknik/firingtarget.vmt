@@ -1,0 +1,7 @@
+"VertexlitGeneric"
+{
+	"$basetexture" "models/pyroteknik/firingtarget_diffuse"
+	"$surfaceprop" "Wood_Panel"
+	"$halflambert" "1"
+	"%keywords" "target"
+}
