@@ -6,12 +6,12 @@ ENT.Spawnable = true
 ENT.PrintName = "Firing Range Target"
 DEFINE_BASECLASS("base_gmodentity")
 ENT.Model = Model("models/pyroteknik/firingtarget.mdl")
-ENT.DefaultHealth = 15
+ENT.DefaultHealth = 30
 local forwardangle = Angle(0, 0, 0)
 local rail1 = Vector(-1904, 89, -320)
 --{rail id, localspace start offset from middle rail, function}
 local NOMOVE = Vector(0, 0, 69)
-
+ 
 local cmds = {
     GO = function(ent,arg)
         ent:SetMoveTarget(arg)
@@ -27,12 +27,12 @@ local cmds = {
         return true
     end,
     DIE = function(ent)
-        ent:Expire() 
+        ent:SetTargetHealth(0) 
 
         return true
     end,
     RESET = function(ent)
-        ent:Reset()
+        ent:SetTargetHealth(ent.DefaultHealth)
 
         return true
     end,
@@ -40,20 +40,21 @@ local cmds = {
         ent.BehaviorQueue = table.Copy(ent.NextBehaviorQueue or {})
     end
 }
- 
+  
 if (SERVER) then
     local testseq = {} 
+    local testseq2 = {} 
+    local testseq3 = {} 
 
     for i = 1, 5 do
         testseq[i] = {
             i, Vector(-200, 0, 0), function(target)
-                target.BehaviorQueue = {"SPEED", 300, "WAIT", i,"RESET", 1, "GO", Vector(200, 0, 0), "WAIT", 0.2,"DIE",0, "WAIT", 2,"RESET", 1, "GO", Vector(-200, 0, 0),"WAIT", 0.2,"DIE",0, "WAIT", 5-i, "RESTART"}
+                target.BehaviorQueue = {"SPEED", 200, "WAIT", i,"RESET", 1, "GO", Vector(200, 0, 0), "WAIT", 0.2,"DIE",0, "WAIT", 2,"RESET", 1, "GO", Vector(-200, 0, 0),"WAIT", 0.2,"DIE",0, "WAIT", 5-i, "RESTART"}
                 target.NextBehaviorQueue = table.Copy(target.BehaviorQueue)
             end
         }
     end
  
-    local testseq2 = {} 
     for x=-4,4 do
     for i = 1, 5 do
         table.insert(testseq2,{
@@ -77,20 +78,22 @@ end
             local railid = target[1]
             local railpos = rail1 + Vector(0, 160, 0) * (railid - 1)
             local localoffset = target[2]
-            local func = target[3]
+            local func = target[3] 
             local ent = ents.Create("firingtarget")
-            ent:SetMoveTarget(NOMOVE)
+            
             local pos, ang = LocalToWorld(localoffset, Angle(0, -90, 0), railpos, forwardangle)
             ent:SetPos(pos)
             ent:SetAngles(ang)
             func(ent)
             ent:Spawn()
+            ent:SetMoveTarget(NOMOVE) 
             ent:SetHomePosition(railpos)
-            ent.SpawnedByRange = true
+            ent.SpawnedByRange = true 
         end
-    end
-
-    TargetSequence(testseq)
+    end 
+    timer.Simple(0,function()
+    TargetSequence(testseq2)
+    end) 
 end
 
 function ENT:Initialize()
@@ -98,12 +101,14 @@ function ENT:Initialize()
     self:SetMoveType(MOVETYPE_NONE)
     self:SetSolid(SOLID_VPHYSICS)
     self:DrawShadow(false)
+    if(CLIENT)then
+        self:SetRenderBounds( Vector(-32,-32,0), Vector(32,32,90), Vector())
+    end
     if SERVER then
-    self:Reset()
-    self:SetHealth(self.DefaultHealth)
+    self:SetTargetHealth(self.DefaultHealth) 
     self:SetHitboxSet("default")
     self:SetLagCompensated(true)
-  
+   
         self:PrecacheGibs()
         self:SetUseType(SIMPLE_USE)
     end
@@ -112,7 +117,7 @@ function ENT:Initialize()
     tr.start = self:GetPos() + Vector(0, 0, 64)
     tr.endpos = tr.start + Vector(0, 0, -128)
 
-    tr.filter = {self}
+    tr.filter = ents.FindByClass("firingtarget")
 
     local trace = util.TraceLine(tr)
     self:SetPos(trace.HitPos)
@@ -165,7 +170,7 @@ function ENT:Busy()
 
     return false
 end
-
+ 
 function ENT:ProcessQueue()
     if (not self:HasQueue()) then  return end
     local cmd = self:ConsumeQueueNext()
@@ -198,104 +203,91 @@ function ENT:Think()
 end
 
 function ENT:SetupDataTables()
-    self:NetworkVar("Bool", 0, "Standing")
+
     self:NetworkVar("Int", 0, "MoveSpeed")
     self:NetworkVar("Vector", 0, "MoveTarget")
     self:NetworkVar("Vector", 1, "HomePosition")
     self:NetworkVar("Float", 0, "PauseEnd")
-
+    self:NetworkVar("Int",1,"TargetHealth")
     if (SERVER) then
-        self:NetworkVarNotify("Standing", self.OnVarChanged)
+        self:NetworkVarNotify("TargetHealth", self.OnVarChanged)
     end
 end
 
 function ENT:OnVarChanged(name, old, new)
-    if (name == "Standing") then
-        self:SetSolid(new == true and SOLID_VPHYSICS or SOLID_NONE)
+    if(name == "TargetHealth")then
+        local solid = new > 0
+        self:SetSolid(solid and SOLID_VPHYSICS or SOLID_NONE)
     end
 end
 
-function ENT:Reset()
-    if (CLIENT) then return end
-    self:SetHealth(self.DefaultHealth)
-    self:SetStanding(true)
-    self:RemoveAllDecals()
-end
 
 function ENT:Expire()
-    if (CLIENT) then return end
-    self:SetStanding(false)
-    self:NextThink(CurTime() + 2)
+    self:SetTargetHealth(0)
 end
 
 function ENT:KnockDown()
-    if (CLIENT) then return end
-    self:SetStanding(false)
-    self:EmitSound("smallbell.ogg", 140, 100, 1, CHAN_AUTO)
+end
+
+function ENT:GetStanding()
+    return self:GetTargetHealth() > 0
 end
 
 function ENT:Draw()
-    self.LastHealth = self.LastHealth or self:Health()
-
-    if (self:Health() ~= self.LastHealth) then
-        self.UpLerp = self.UpLerp + math.Rand(0.04, 0.1)
-        self.LastHealth = self:Health()
-    end
-
     self.UpLerp = math.Approach(self.UpLerp or 0, self:GetStanding() and 0 or 1, FrameTime() * 8)
     self:ManipulateBoneAngles(0, Angle(-88 * self.UpLerp, 0, 0))
     self:DrawModel()
 end
 
-function ENT:Use(act, cal)
-    self:Reset()
-end
-
 function ENT:OnRemove()
     if (CLIENT) then
-        self:GibBreakClient(Vector())
+        --self:GibBreakClient(Vector())
     end
 end
 
-function ENT:HitgroupFromDamage(dmg)
-    local raystart, raydelta = dmg:GetDamagePosition(), dmg:GetDamageForce()
-    local box
-    local boxfrac = 1
-
-    for i = 0, self:GetHitBoxCount(0) - 1 do
+function ENT:HitBullet(dmg,tr)
+    local hitgroup = tr.HitGroup 
+    local hitbox = tr.HitBox
+    if (hitbox) then
         local pos, ang = self:GetBonePosition(0)
-        local mins, maxs = self:GetHitBoxBounds(i, 0)
-        local hit, normal, frac = util.IntersectRayWithOBB(raystart, raystart + dmg:GetDamageForce(), pos, ang, mins, maxs)
-
-        if (hit and frac < boxfrac) then
-            box = i
-            boxfrac = frac
-        end
+        local mins, maxs = self:GetHitBoxBounds(hitbox, 0)
+        debugoverlay.BoxAngles(pos, mins, maxs, ang, 0.5, SERVER and Color(0, 0, 255, 32) or CLIENT and Color(255,235,64,16))
     end
-
-    if (box) then
-        local pos, ang = self:GetBonePosition(0)
-        local mins, maxs = self:GetHitBoxBounds(box, 0)
-        debugoverlay.BoxAngles(pos, mins, maxs, ang, 2, Color(0, 0, 255, 32))
-
-        return self:GetHitBoxHitGroup(box, 0)
-    end
-end
-
-function ENT:OnTakeDamage(dmg)
-    local hitgroup = self:HitgroupFromDamage(dmg)
-
+    local score = 10
     if (hitgroup == HITGROUP_HEAD) then
         dmg:ScaleDamage(2)
+        score = 50
     end
 
     if (hitgroup == HITGROUP_CHEST) then
         dmg:ScaleDamage(1.4)
+        score = 100
     end
-    self:EmitSound("smallbell.ogg", 140, 100, 1, CHAN_AUTO)
-    self:SetHealth(self:Health() - dmg:GetDamage())
+    if(CLIENT)then 
+        self:EmitSound("smallbell.ogg", 140, 100, 1, CHAN_AUTO) 
+    end
+    local ply = dmg:GetAttacker()
+    ply.FRangeScore = (ply.FRangeScore or 0) + score
+    print(ply.FRangeScore,"(+"..score..")")
 
-    if (self:Health() <= 0) then
-        self:KnockDown()
-    end
+    self:SetTargetHealth(self:GetTargetHealth() - dmg:GetDamage())
+    local solid = self:GetTargetHealth() > 0
+    self:SetSolid(solid and SOLID_VPHYSICS or SOLID_NONE)
+    
 end
+
+local ftarget_handlecallback = function(attacker,tr,dmg)
+    if(ftarget_origcallback)then ftarget_origcallback(attacker,tr,dmg) end
+       local ent = tr.Entity
+        if(IsValid(ent) and ent:GetClass() == "firingtarget")then
+            ent:HitBullet(dmg,tr)
+        end 
+end
+hook.Add("EntityFireBullets","FiringRange",function(ent,data)
+    ftarget_origcallback = data.Callback
+    if(IsFirstTimePredicted() or SERVER)then
+    data.Callback = ftarget_handlecallback
+    end
+    ftarget_origcallback = nil
+    return true
+end)
