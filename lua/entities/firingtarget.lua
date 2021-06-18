@@ -1,4 +1,4 @@
-﻿-- This file is subject to copyright - contact swampservers@gmail.com for more information.
+-- This file is subject to copyright - contact swampservers@gmail.com for more information.
 -- INSTALL: CINEMA
 AddCSLuaFile()
 ENT.Type = "anim"
@@ -254,6 +254,7 @@ function ENT:HitBullet(dmg,tr)
         debugoverlay.BoxAngles(pos, mins, maxs, ang, 0.5, SERVER and Color(0, 0, 255, 32) or CLIENT and Color(255,235,64,16))
     end
     local score = 10
+    
     if (hitgroup == HITGROUP_HEAD) then
         dmg:ScaleDamage(2)
         score = 50
