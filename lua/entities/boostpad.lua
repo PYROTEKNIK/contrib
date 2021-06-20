@@ -165,7 +165,6 @@ function ENT:Touch(ent)
             tr.mins = mins
             tr.maxs = maxs
             local trace = util.TraceHull(tr)
-            PrintTable(trace)
             if (trace.Entity == self) then
                 ent:Notify("Blocked by self! Complain to PYROTEKNIK if this happens super frequently.")
             end
