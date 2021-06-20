@@ -18,74 +18,65 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 end
 
 function SWEP:DrawWorldModel(flags)
-    local ply = self:GetOwner()
-    self:SetModelScale(1, 0)
-    self:SetSubMaterial()
-    local matrix
-    local horn = false
-    local opos = self:GetPos()
-    local oang = self:GetAngles()
-
-    if IsValid(ply) then
-        local isPony = ply:IsPony()
-        local bn = isPony and "LrigScull" or "ValveBiped.Bip01_R_Hand"
-        local bon = ply:LookupBone(bn) or 0
-
-        if (bon) then
-            local bp, ba = ply:GetBonePosition(bon)
-            bp = bp or self:GetPos()
-            ba = ba or self:GetAngles()
-
-            if bp then
-                opos = bp
-            end
-
-            if ba then
-                oang = ba
-            end
-
-            if isPony then
-                opos = opos + (oang:Forward() * 6.4) + (oang:Right() * -1.8) + (oang:Up() * 0)
-                oang:RotateAroundAxis(oang:Right(), 80)
-                oang:RotateAroundAxis(oang:Forward(), 12)
-                oang:RotateAroundAxis(oang:Up(), 20)
-            else
-                oang:RotateAroundAxis(oang:Forward(), 90)
-                oang:RotateAroundAxis(oang:Right(), 90)
-                oang:RotateAroundAxis(oang:Forward(), 90)
-                opos = opos + oang:Right() * 3.5
-                opos = opos + oang:Forward() * 2
-                opos = opos + oang:Up() * 0
-                oang:RotateAroundAxis(oang:Up(), -90)
-            end
-
-            if (isPony) then
-                if (horn) then
-                    opos = opos - oang:Up() * 5
-                else
-                    opos = opos + oang:Up() * 3
-                end
-            end
-
-            self:SetupBones()
-            matrix = self:GetBoneMatrix(0)
-
-            if matrix then
-                matrix:SetTranslation(opos)
-                matrix:SetAngles(oang)
-                self:SetBoneMatrix(0, matrix)
-            end
-        end
-    end
-
-    render.MaterialOverride()
-    draw.NoTexture()
-    local cl = self:GetDecalColor()
-    render.SetColorModulation(cl.x, cl.y, cl.z)
-    render.SetBlend(1)
-    self:SetBodygroup(1, 1)
+    -- local ply = self:GetOwner()
+    -- self:SetModelScale(1, 0)
+    -- self:SetSubMaterial()
+    -- local matrix
+    -- local horn = false
+    -- local opos = self:GetPos()
+    -- local oang = self:GetAngles()
+    -- if IsValid(ply) then
+    --     local isPony = ply:IsPony()
+    --     local bn = isPony and "LrigScull" or "ValveBiped.Bip01_R_Hand"
+    --     local bon = ply:LookupBone(bn) or 0
+    --     if (bon) then
+    --         local bp, ba = ply:GetBonePosition(bon)
+    --         bp = bp or self:GetPos()
+    --         ba = ba or self:GetAngles()
+    --         if bp then
+    --             opos = bp
+    --         end
+    --         if ba then
+    --             oang = ba
+    --         end
+    --         if isPony then
+    --             opos = opos + (oang:Forward() * 6.4) + (oang:Right() * -1.8) + (oang:Up() * 0)
+    --             oang:RotateAroundAxis(oang:Right(), 80)
+    --             oang:RotateAroundAxis(oang:Forward(), 12)
+    --             oang:RotateAroundAxis(oang:Up(), 20)
+    --         else
+    --             oang:RotateAroundAxis(oang:Forward(), 90)
+    --             oang:RotateAroundAxis(oang:Right(), 90)
+    --             oang:RotateAroundAxis(oang:Forward(), 90)
+    --             opos = opos + oang:Right() * 3.5
+    --             opos = opos + oang:Forward() * 2
+    --             opos = opos + oang:Up() * 0
+    --             oang:RotateAroundAxis(oang:Up(), -90)
+    --         end
+    --         if (isPony) then
+    --             if (horn) then
+    --                 opos = opos - oang:Up() * 5
+    --             else
+    --                 opos = opos + oang:Up() * 3
+    --             end
+    --         end
+    --         self:SetupBones()
+    --         matrix = self:GetBoneMatrix(0)
+    --         if matrix then
+    --             matrix:SetTranslation(opos)
+    --             matrix:SetAngles(oang)
+    --             self:SetBoneMatrix(0, matrix)
+    --         end
+    --     end
+    -- end
+    -- render.MaterialOverride()
+    -- draw.NoTexture()
+    -- local cl = self:GetDecalColor()
+    -- render.SetColorModulation(cl.x, cl.y, cl.z)
+    -- render.SetBlend(1)
+    -- self:SetBodygroup(1, 1)
     self:DrawModel()
-    render.SetColorModulation(1, 1, 1)
+    -- render.SetColorModulation(1, 1, 1)
 end
 
 function SWEP:GetViewModelPosition(epos, eang)
@@ -115,7 +106,7 @@ function SWEP:DoParticle(pos)
         self.SprayEmitter:SetPos(pos)
         local particle = self.SprayEmitter:Add(string.format("particle/smokesprites_00%02d", math.random(7, 16)), pos)
         particle:SetColor(color.x * 255, color.y * 255, color.z * 255, 255)
-        particle:SetStartAlpha(32)
+        particle:SetStartAlpha(128)
         particle:SetVelocity(VectorRand() * 6)
         particle:SetGravity(Vector(0, 0, 0))
         particle:SetLifeTime(0)
@@ -128,32 +119,40 @@ function SWEP:DoParticle(pos)
         particle:SetBounce(0)
         particle:SetRoll(math.Rand(0, 360))
         particle:SetRollDelta(0.01 * math.Rand(-40, 40))
-        particle:SetAirResistance(100)
+        particle:SetAirResistance(10)
     end
 end
 
 SpraypaintMenu = nil
+SPRAYPAINT_DECALPREVIEW_CACHE = {}
 
-function SWEP:GetPreviewMat()
-    SPRAYPAINT_DECALPREVIEW_CACHE = SPRAYPAINT_DECALPREVIEW_CACHE or {}
+function SWEP:GetPreviewMat(decal)
     local ply = self:GetOwner()
-    local decal = ply:GetInfo(self.ConVar)
-    local mat = Material(util.DecalMaterial(decal) or util.DecalMaterial("Cross"))
-    local t = mat:GetString("$basetexture")
-    local f = mat:GetFloat("$frame")
-    local sc = mat:GetFloat("$decalscale")
-    local c = mat:GetVector("$color2")
-    local shader = mat:GetShader() or "VertexLitGeneric"
-
-    if (shader == "VertexLitGeneric") then
-        shader = "UnlitGeneric"
-    end
-
-    if (shader == "LightmappedGeneric") then
-        shader = "UnlitGeneric"
-    end
+    decal = decal or self:GetCurrentDecal()
+    local decalmat = util.DecalMaterial(decal)
+    if (not decalmat) then return Material("___error") end
+    local mat = Material(decalmat) --let's create a new material
+    if (not mat or (mat and mat:IsError())) then return Material("___error") end
 
     if (SPRAYPAINT_DECALPREVIEW_CACHE[decal] == nil) then
+        local t = mat:GetString("$basetexture")
+        local f = mat:GetFloat("$frame")
+        local sc = mat:GetFloat("$decalscale")
+        local c = mat:GetVector("$color2")
+        local shader = mat:GetShader() or "VertexLitGeneric"
+
+        if (shader == "Subrect") then
+            shader = "UnlitGeneric"
+        end
+
+        if (shader == "VertexLitGeneric") then
+            shader = "UnlitGeneric"
+        end
+
+        if (shader == "LightmappedGeneric") then
+            shader = "UnlitGeneric"
+        end
+
         local params = {}
         params["$basetexture"] = t
         params["$frame"] = f
@@ -161,7 +160,7 @@ function SWEP:GetPreviewMat()
         params["$vertexcolor"] = 1
         params["$vertexalpha"] = 1
         params["$decalscale"] = sc
-        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. "stencilpreviewmat", shader, params)
+        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. "decalpreviewmat", shader, params)
     end
 
     return SPRAYPAINT_DECALPREVIEW_CACHE[decal]
@@ -184,10 +183,9 @@ function SWEP:DrawSpraypaintReticle()
     local pos = trace.HitPos + trace.HitNormal * 0.1
     local ang = trace.HitNormal:Angle()
     local mat = self:GetPreviewMat()
-    local color = self:GetDecalColor()
+    local color, size = self:GetDecalColor()
 
     if (mat) then
-        local size = mat:Width() * tonumber(mat:GetFloat("$decalscale"))
         ang:RotateAroundAxis(ang:Up(), 90)
         ang:RotateAroundAxis(ang:Forward(), 90)
 
@@ -236,6 +234,7 @@ function SWEP:SpraypaintOpenPanel()
     List:Center()
     List:SetSpaceY(4) -- Sets the space in between the panels on the Y Axis by 5
     List:SetSpaceX(4) -- Sets the space in between the panels on the X Axis by 5
+    List:Dock(FILL)
     local columncounter = 1
     local rows = 1
 
@@ -244,6 +243,7 @@ function SWEP:SpraypaintOpenPanel()
         DButton:SetPos(128, 240)
         DButton:SetText("")
         DButton:SetSize(48, 48)
+        DButton.PerformLayout = function() end
         local keycode = list.Get(self.DecalSet .. "_keycodes")[k]
 
         if (keycode) then
@@ -256,70 +256,23 @@ function SWEP:SpraypaintOpenPanel()
         end
 
         --we need to create the image and then destroy some of its functions so we can use custom handling
-        local decalmat = util.DecalMaterial(v)
+        local decalmat = self:GetPreviewMat(v)
+        local color, size = self:GetDecalColor(v)
 
-        if (decalmat) then
-            DButton.PerformLayout = function() end
-            DButton:SetMaterial("models/shiny")
-            DButton.m_Image.FixVertexLitMaterial = function() end
-            local mat = Material(decalmat)
-            local dispmat = mat and mat:GetString("$modelmaterial") or mat and mat:GetName()
-            local color = mat:GetVector("$color2"):ToColor() or Color(255, 255, 255)
-            local size = mat:Width() * tonumber(mat:GetFloat("$decalscale"))
-
-            function DButton.m_Image:FixImage()
-                --
-                -- If it's a vertexlitgeneric material we need to change it to be
-                -- UnlitGeneric so it doesn't go dark when we enter a dark room
-                -- and flicker all about
-                --
-                local Mat = self:GetMaterial()
-
-                if (not Mat) then
-                    self:SetMaterial("models/shiny")
-
-                    return
-                end
-
-                local strImage = Mat:GetName()
-                local t = Mat:GetString("$basetexture")
-                local f = Mat:GetFloat("$frame")
-                local c = Mat:GetVector("$color2")
-                local shader = mat:GetShader()
-
-                if (shader == "VertexLitGeneric") then
-                    shader = "UnlitGeneric"
-                end
-
-                if (shader == "LightmappedGeneric") then
-                    shader = "UnlitGeneric"
-                end
-
-                if (t) then
-                    local params = {}
-                    params["$basetexture"] = t
-                    params["$frame"] = f
-                    params["$color2"] = c
-                    params["$vertexcolor"] = 1
-                    params["$vertexalpha"] = 1
-                    Mat = CreateMaterial(strImage .. "_DecalPreview3", shader, params)
-                end
-
-                self:SetMaterial(Mat)
-            end
-
-            DButton.m_Image:SetMaterial(dispmat)
-            DButton.m_Image:FixImage()
+        if (decalmat and decalmat:GetName() ~= "___error") then
+            DButton:SetMaterial(decalmat)
+            DButton.m_Image:SetImageColor(color:ToColor())
+            local mat = decalmat
             --DButton:SetText(k)
             --DButton:SetMaterial()
             --DButton:SetTooltip(util.DecalMaterial(v))
-            DButton.m_Image:SetImageColor(color)
             DButton.m_Image:Dock(NODOCK)
             local isize = math.Clamp(size * 3, 0, 48)
             DButton.m_Image:SetSize(isize, isize)
             DButton.m_Image:Center()
         else
-            DButton:SetText("[missing]")
+            DButton:SetMaterial("___error")
+            DButton.m_Image:Dock(FILL)
         end
 
         DButton.DoClick = function()
@@ -335,7 +288,6 @@ function SWEP:SpraypaintOpenPanel()
         end
     end
 
-    List:Dock(FILL)
     Frame:SizeToContents()
     Frame:SetTall((rows) * (48 + 4) + 30)
     Frame:Center()
