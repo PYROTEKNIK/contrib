@@ -27,7 +27,7 @@ function ENT:Use(act)
         net.Start("HELLTAKER")
         net.WriteEntity(self)
         net.Send(act)
-        act:Lock()
+        -- act:Lock()
     end
 end
 
@@ -43,39 +43,34 @@ if CLIENT then
         self:DrawModel()
     end
 
-    hook.Add( "CalcView", "HellTakerView", function( ply, pos, angles, fov )
-
+    hook.Add("CalcView", "HellTakerView", function(ply, pos, angles, fov)
         if IsValid(HELLTAKERFRAME) then
             if IsValid(LocalPlayer()) and LocalPlayer():InVehicle() then
                 HELLTAKERFRAME:Close()
+
                 return
             end
 
             if IsValid(HELLTAKERPLAYENT) then
                 local p, a = HELLTAKERPLAYENT:ScreenCenter()
-
-                a:RotateAroundAxis(a:Up(),90)
-
-                a:RotateAroundAxis(a:Right(),-90)
-
+                a:RotateAroundAxis(a:Up(), 90)
+                a:RotateAroundAxis(a:Right(), -90)
                 local lerp = math.min(1, (SysTime() - HELLTAKERPLAYENTTIME) * 2)
-
-                lerp = 0.5-0.5*math.cos(lerp*math.pi)
+                lerp = 0.5 - 0.5 * math.cos(lerp * math.pi)
 
                 return {
-                    origin = LerpVector(lerp, pos, p - a:Forward()*50 - a:Up()*1),
+                    origin = LerpVector(lerp, pos, p - a:Forward() * 50 - a:Up() * 1),
                     angles = LerpAngle(lerp, angles, a),
                     fov = Lerp(lerp, fov, 60),
                     drawviewer = false
                 }
             end
         end
-    end )
-
-    hook.Add( "PreDrawViewModel", "HelltakerRemoveVM", function()
-        if IsValid(HELLTAKERFRAME) then return true end
     end)
 
+    hook.Add("PreDrawViewModel", "HelltakerRemoveVM", function()
+        if IsValid(HELLTAKERFRAME) then return true end
+    end)
 
     hook.Add("PostDrawTranslucentRenderables", "DrawHTScreen", function()
         if #DRAWN_HT_ENTS > 0 then
@@ -133,7 +128,7 @@ if CLIENT then
         HELLTAKERHTML = vgui.Create("HTML", HELLTAKERFRAME)
         HELLTAKERHTML:SetPos(0, 24)
         HELLTAKERHTML:SetSize(900, 890)
-        HELLTAKERHTML:OpenURL("swampservers.net/helltaker")
+        HELLTAKERHTML:OpenURL("swamp.sv/helltaker")
         HELLTAKERHTML:SetZPos(-10000)
         HELLTAKERHTML:RunJavascript("defaultcontrols=false;")
         HELLTAKERFRAME:SetMouseInputEnabled(false)
@@ -218,8 +213,5 @@ if SERVER then
 
     timer.Simple(0, SETUPHELLTAKER)
     util.AddNetworkString("HELLTAKER")
-
-    net.Receive("HELLTAKER", function(len, ply)
-        ply:UnLock()
-    end)
+    net.Receive("HELLTAKER", function(len, ply) end) -- ply:UnLock()
 end
