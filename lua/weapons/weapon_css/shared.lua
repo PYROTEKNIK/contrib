@@ -67,7 +67,7 @@ function SWEP:AddSpread()
 end
 
 function SWEP:GetMaxSpread()
-    return self.InaccuracyMove or 0
+    return self.Primary.Accuracy.InaccuracyMove or 0
 end
 
 function SWEP:Think()
