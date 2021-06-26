@@ -82,7 +82,7 @@ function SWEP:Think()
 end
 
 function SWEP:GetSpread()
-    return math.max((self.Spread or 0) + self:GetInaccuracy() + (self.TrackedSpread or 0), 0)
+    return math.max((self.Primary.Accuracy.Spread or 0) + self:GetInaccuracy() + (self.TrackedSpread or 0), 0)
 end
 
 function SWEP:GetKick()
@@ -120,7 +120,7 @@ function SWEP:PrimaryAttack()
     if (self.Sounds.single_shot) then
         self:EmitSound(self.Sounds.single_shot)
     end
-
+ 
     local kick = Vector(0, -1, self:GetKick()):Angle().pitch
     kick = math.NormalizeAngle(kick)
 
@@ -198,6 +198,7 @@ function SWEP:DoDrawCrosshair(x, y)
         r = Vector(x, y, 0):Distance(Vector(data2D.x, data2D.y, 0))
         self.LerpCrosshair = Lerp(0.1,self.LerpCrosshair or r,r)
         r = self.LerpCrosshair
+
         surface.DrawCircle(x - 0.5, y + 0.5, r, clr.r, clr.g, clr.b, clr.a or 255)
     end
 
