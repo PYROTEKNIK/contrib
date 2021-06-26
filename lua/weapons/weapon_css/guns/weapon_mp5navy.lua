@@ -32,6 +32,7 @@ Primary = {
         InaccuracyFire = 0.0063,
         InaccuracyStand = 0.0171,
         InaccuracyJump = 0.2302,
+        MaxInaccuracy = 0.75,
         InaccuracyLand = 0.046,
         InaccuracyLadder = 0.0575,
         Spread = 0.001,
@@ -60,7 +61,6 @@ WepSelData = {
     "X",
 },
 IconOverride = "VGUI/gfx/VGUI/weapon_mp5navy",
-IdleInterval = 20,
 TimeToIdle = 2,
-MaxInaccuracy = 0.75,
+IdleInterval = 20,
 })

@@ -32,6 +32,7 @@ Primary = {
         InaccuracyFire = 0.0084,
         InaccuracyStand = 0.019,
         InaccuracyJump = 0.137,
+        MaxInaccuracy = 1.65,
         InaccuracyLand = 0.0274,
         InaccuracyLadder = 0.0342,
         Spread = 0.001,
@@ -60,7 +61,6 @@ WepSelData = {
     "L",
 },
 IconOverride = "VGUI/gfx/VGUI/weapon_mac10",
-IdleInterval = 20,
 TimeToIdle = 2,
-MaxInaccuracy = 1.65,
+IdleInterval = 20,
 })

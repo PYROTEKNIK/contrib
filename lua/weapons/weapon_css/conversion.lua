@@ -1,5 +1,5 @@
 
-if(true)then end
+if(true)then return end
 local ConversionNumbers = function(NSWEP, key, value)
     NSWEP[key] = math.Round(tonumber(value), 5)
 end
@@ -242,12 +242,12 @@ for k, fl in pairs(file.Find("weapons/weapon_css/guns_raw/*", "LUA")) do
                 key = Conversion[key]
             end
         end
-
+ 
         local ks = KeySend[key]
         local accuracytags = {
             Spread=true,
             SpreadAlt=true,
-            
+            MaxInaccuracy= true,
             RecoveryTimeStand=true,
             RecoveryTimeCrouch=true,
         }

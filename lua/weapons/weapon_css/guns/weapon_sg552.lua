@@ -33,6 +33,7 @@ Primary = {
         InaccuracyCrouchAlt = 0.0028,
         InaccuracyStand = 0.0054,
         InaccuracyJump = 0.3346,
+        MaxInaccuracy = 1,
         InaccuracyLandAlt = 0.0669,
         InaccuracyFire = 0.0122,
         InaccuracyLadderAlt = 0.0836,
@@ -62,8 +63,7 @@ WepSelData = {
     "[",
 },
 IconOverride = "VGUI/gfx/VGUI/weapon_sg552",
-MuzzleFlashStyle = "CS_MUZZLEFLASH_X",
 IdleInterval = 20,
-MaxInaccuracy = 1,
+MuzzleFlashStyle = "CS_MUZZLEFLASH_X",
 TimeToIdle = 2,
 })
