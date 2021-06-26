@@ -1,0 +1,67 @@
+-- This file is subject to copyright - contact swampservers@gmail.com for more information.
+-- INSTALL: CINEMA
+-- This file was generated from the counter-strike source keyvalues file for this weapon. Please excuse the shitty formatting
+AddCSLuaFile()
+table.Merge(SWEP,{
+Base = "weapon_css",
+PrintName = "#Cstrike_WPNHUD_UMP45",
+WeaponType = "SubMachinegun",
+WorldModel = "models/weapons/w_smg_ump45.mdl",
+ViewModel = "models/weapons/v_smg_ump45.mdl",
+ViewModelFlip = true,
+HoldType = "smg",
+Slot = 2,
+Spawnable = true,
+Category = "Counter-Strike:Source",
+CSMuzzleFlashes = true,
+CSMuzzleX = false,
+MuzzleFlashScale = 1.15,
+Sounds = {
+    single_shot = "Weapon_UMP45.Single",
+},
+Primary = {
+    Ammo = "BULLET_PLAYER_45ACP",
+    Automatic = true,
+    Damage = 30,
+    Penetration = 1,
+    ClipSize = 25,
+    CycleTime = 0.105,
+    Accuracy = {
+        AccuracyDivisor = 210,
+        RecoveryTimeCrouch = 0.2171,
+        InaccuracyFire = 0.0112,
+        InaccuracyStand = 0.0191,
+        InaccuracyJump = 0.1694,
+        AccuracyOffset = 0.5,
+        InaccuracyMove = 0.0136,
+        InaccuracyLadder = 0.0423,
+        AccuracyQuadratic = 1,
+        InaccuracyLand = 0.0338,
+        RecoveryTimeStand = 0.3039,
+        Spread = 0.001,
+        InaccuracyCrouch = 0.0143,
+    },
+    Bullets = 1,
+    DefaultClip = 25,
+    Range = 4096,
+},
+Secondary = {
+    Ammo = "None",
+    ClipSize = -1,
+},
+CrosshairInfo = {
+    x = 0,
+    file = "sprites/crosshairs",
+    y = 48,
+    height = 24,
+    width = 24,
+},
+WepSelData = {
+    "CSweaponsSmall",
+    "Q",
+},
+IconOverride = "VGUI/gfx/VGUI/weapon_ump45",
+IdleInterval = 20,
+TimeToIdle = 2,
+MaxInaccuracy = 1,
+})

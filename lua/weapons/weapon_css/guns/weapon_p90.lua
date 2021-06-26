@@ -1,0 +1,68 @@
+-- This file is subject to copyright - contact swampservers@gmail.com for more information.
+-- INSTALL: CINEMA
+-- This file was generated from the counter-strike source keyvalues file for this weapon. Please excuse the shitty formatting
+AddCSLuaFile()
+table.Merge(SWEP,{
+Base = "weapon_css",
+PrintName = "#Cstrike_WPNHUD_P90",
+WeaponType = "SubMachinegun",
+WorldModel = "models/weapons/w_smg_p90.mdl",
+ViewModel = "models/weapons/v_smg_p90.mdl",
+ViewModelFlip = true,
+HoldType = "smg",
+Slot = 2,
+Spawnable = true,
+Category = "Counter-Strike:Source",
+CSMuzzleFlashes = true,
+CSMuzzleX = false,
+MuzzleFlashScale = 1.2,
+Sounds = {
+    single_shot = "Weapon_P90.Single",
+},
+Primary = {
+    Ammo = "BULLET_PLAYER_57MM",
+    Automatic = true,
+    Damage = 26,
+    Penetration = 1,
+    ClipSize = 50,
+    CycleTime = 0.07,
+    Accuracy = {
+        AccuracyDivisor = 175,
+        RecoveryTimeCrouch = 0.2328,
+        InaccuracyFire = 0.0073,
+        InaccuracyStand = 0.0195,
+        InaccuracyJump = 0.1649,
+        AccuracyOffset = 0.45,
+        InaccuracyLand = 0.0329,
+        InaccuracyLadder = 0.0412,
+        AccuracyQuadratic = 1,
+        InaccuracyMove = 0.0106,
+        RecoveryTimeStand = 0.326,
+        Spread = 0.001,
+        InaccuracyCrouch = 0.0146,
+    },
+    Bullets = 1,
+    DefaultClip = 50,
+    Range = 4096,
+},
+Secondary = {
+    Ammo = "None",
+    ClipSize = -1,
+},
+CrosshairInfo = {
+    x = 0,
+    file = "sprites/crosshairs",
+    y = 48,
+    height = 24,
+    width = 24,
+},
+WepSelData = {
+    "CSweaponsSmall",
+    "M",
+},
+IconOverride = "VGUI/gfx/VGUI/weapon_p90",
+MaxInaccuracy = 1,
+IdleInterval = 20,
+MuzzleFlashStyle = "CS_MUZZLEFLASH_X",
+TimeToIdle = 2,
+})

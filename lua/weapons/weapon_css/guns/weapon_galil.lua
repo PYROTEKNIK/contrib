@@ -1,0 +1,68 @@
+-- This file is subject to copyright - contact swampservers@gmail.com for more information.
+-- INSTALL: CINEMA
+-- This file was generated from the counter-strike source keyvalues file for this weapon. Please excuse the shitty formatting
+AddCSLuaFile()
+table.Merge(SWEP,{
+Base = "weapon_css",
+PrintName = "#Cstrike_WPNHUD_Galil",
+WeaponType = "Rifle",
+WorldModel = "models/weapons/w_rif_galil.mdl",
+ViewModel = "models/weapons/v_rif_galil.mdl",
+ViewModelFlip = false,
+HoldType = "ar2",
+Slot = 2,
+Spawnable = true,
+Category = "Counter-Strike:Source",
+CSMuzzleFlashes = true,
+CSMuzzleX = true,
+MuzzleFlashScale = 1.6,
+Sounds = {
+    special3 = "Default.Zoom",
+    single_shot = "Weapon_Galil.Single",
+},
+Primary = {
+    Ammo = "BULLET_PLAYER_556MM",
+    Automatic = true,
+    Damage = 30,
+    Penetration = 2,
+    ClipSize = 35,
+    CycleTime = 0.09,
+    Accuracy = {
+        AccuracyDivisor = 200,
+        RecoveryTimeCrouch = 0.3519,
+        InaccuracyFire = 0.0098,
+        InaccuracyLand = 0.0908,
+        AccuracyOffset = 0.35,
+        InaccuracyStand = 0.0125,
+        InaccuracyLadder = 0.1135,
+        Spread = 0.0006,
+        InaccuracyMove = 0.1056,
+        RecoveryTimeStand = 0.4927,
+        InaccuracyJump = 0.4543,
+        InaccuracyCrouch = 0.0093,
+    },
+    Bullets = 1,
+    DefaultClip = 35,
+    Range = 8192,
+},
+Secondary = {
+    Ammo = "None",
+    ClipSize = -1,
+},
+CrosshairInfo = {
+    x = 0,
+    file = "sprites/crosshairs",
+    y = 48,
+    height = 24,
+    width = 24,
+},
+WepSelData = {
+    "CSweaponsSmall",
+    "V",
+},
+IconOverride = "VGUI/gfx/VGUI/weapon_galil",
+MaxInaccuracy = 1.25,
+IdleInterval = 20,
+MuzzleFlashStyle = "CS_MUZZLEFLASH_X",
+TimeToIdle = 1.28,
+})
