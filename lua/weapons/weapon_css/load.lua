@@ -16,10 +16,11 @@ end
 
 Conversion["WeaponType"] = function(NSWEP, value)
     local holdtypes = {
+        Knife = "knife",
         Rifle = "ar2",
         SubMachinegun = "smg",
         Pistol = "pistol",
-        Shogun = "shotgun",
+        Shotgun = "shotgun",
         SniperRifle = "ar2",
         Machinegun = "ar2",
         Grenade = "grenade",
@@ -27,19 +28,20 @@ Conversion["WeaponType"] = function(NSWEP, value)
     }
  
     local slots = {
+        Knife = 0,
         Pistol = 1,
         Rifle = 2,
         SubMachinegun = 2,
         Machinegun = 2,
         Shotgun = 3,
         SniperRifle = 3,
-        Grenade = 3,
+        Grenade = 4,
+        C4 = 4,
     }
 
     if (value == "SniperRifle") then
         NSWEP.CanScope = true
     end
-
     NSWEP.HoldType = holdtypes[value] or "pistol"
     NSWEP.Slot = slots[value] or 4
     NSWEP.WeaponType = value
@@ -125,34 +127,34 @@ if (CLIENT) then
     })
 
     language.Add("Cstrike_WPNHUD_HE_Grenade", "High-Explosive Grenade")
-    language.Add("Cstrike_WPNHUD_Flashbang", "FLASHBANG")
-    language.Add("Cstrike_WPNHUD_Smoke_Grenade", "SMOKE GRENADE")
+    language.Add("Cstrike_WPNHUD_Flashbang", "Flashbang Grenade")
+    language.Add("Cstrike_WPNHUD_Smoke_Grenade", "Smoke Grenade")
     language.Add("Cstrike_WPNHUD_AK47", "AK-47")
-    language.Add("Cstrike_WPNHUD_Aug", "BULLPUP")
-    language.Add("Cstrike_WPNHUD_AWP", "MAGNUM SNIPER RIFLE")
-    language.Add("Cstrike_WPNHUD_DesertEagle", ".50 DESERT EAGLE")
-    language.Add("Cstrike_WPNHUD_Elites", ".40 DUAL ELITES")
-    language.Add("Cstrike_WPNHUD_Famas", "CLARION 5.56")
-    language.Add("Cstrike_WPNHUD_FiveSeven", "ES FIVE-SEVEN")
-    language.Add("Cstrike_WPNHUD_G3SG1", "D3/AU-1")
-    language.Add("Cstrike_WPNHUD_Galil", "IDF DEFENDER")
-    language.Add("Cstrike_WPNHUD_Glock18", "9X19MM SIDEARM")
-    language.Add("Cstrike_WPNHUD_Knife", "KNIFE")
+    language.Add("Cstrike_WPNHUD_Aug", "AUG")
+    language.Add("Cstrike_WPNHUD_AWP", "AWP")
+    language.Add("Cstrike_WPNHUD_DesertEagle", ".50 Desert Eagle")
+    language.Add("Cstrike_WPNHUD_Elites", ".40 Dual Elites")
+    language.Add("Cstrike_WPNHUD_Famas", "Famas 5.56")
+    language.Add("Cstrike_WPNHUD_FiveSeven", "ES Five-Seven")
+    language.Add("Cstrike_WPNHUD_G3SG1", "G3/SG-1")
+    language.Add("Cstrike_WPNHUD_Galil", "Galil")
+    language.Add("Cstrike_WPNHUD_Glock18", "Glock 18")
+    language.Add("Cstrike_WPNHUD_Knife", "Knife")
     language.Add("Cstrike_WPNHUD_M249", "M249")
-    language.Add("Cstrike_WPNHUD_m3", "LEONE 12 GAUGE SUPER")
-    language.Add("Cstrike_WPNHUD_M4A1", "MAVERICK M4A1 CARBINE")
-    language.Add("Cstrike_WPNHUD_MAC10", "INGRAM MAC-10")
-    language.Add("Cstrike_WPNHUD_MP5", "K&M SUB-MACHINE GUN")
-    language.Add("Cstrike_WPNHUD_P228", "228 COMPACT")
-    language.Add("Cstrike_WPNHUD_P90", "ES C90")
-    language.Add("Cstrike_WPNHUD_Scout", "SCHMIDT SCOUT") 
-    language.Add("Cstrike_WPNHUD_SG550", "KRIEG 550 COMMANDO")
-    language.Add("Cstrike_WPNHUD_SG552", "KRIEG 552")
-    language.Add("Cstrike_WPNHUD_Tmp", "SCHMIDT MACHINE PISTOL")
-    language.Add("Cstrike_WPNHUD_UMP45", "K&M UMP45")
-    language.Add("Cstrike_WPNHUD_USP45", "K&M .45 TACTICAL")
-    language.Add("Cstrike_WPNHUD_xm1014", "LEONE YG1265 AUTO SHOTGUN")
-    language.Add("Cstrike_WPNHUD_C4", "C4 EXPLOSIVE")
+    language.Add("Cstrike_WPNHUD_m3", " M3 Super 90")
+    language.Add("Cstrike_WPNHUD_M4A1", "M4A1 Carbine")
+    language.Add("Cstrike_WPNHUD_MAC10", "MAC-10")
+    language.Add("Cstrike_WPNHUD_MP5", "MP5N")
+    language.Add("Cstrike_WPNHUD_P228", "P228")
+    language.Add("Cstrike_WPNHUD_P90", "FN P90")
+    language.Add("Cstrike_WPNHUD_Scout", "Scout") 
+    language.Add("Cstrike_WPNHUD_SG550", "SG550")
+    language.Add("Cstrike_WPNHUD_SG552", "SG552")
+    language.Add("Cstrike_WPNHUD_Tmp", "TMP")
+    language.Add("Cstrike_WPNHUD_UMP45", "UMP45")
+    language.Add("Cstrike_WPNHUD_USP45", "USP45")
+    language.Add("Cstrike_WPNHUD_xm1014", "M4 Super 90")
+    language.Add("Cstrike_WPNHUD_C4", "C4 Explosive")
     language.Add("AMMO_TYPE_FLASHBANG_ammo", "Flashbang Grenades")
     language.Add("AMMO_TYPE_HEGRENADE_ammo", "High-Explosive Grenades")
     language.Add("AMMO_TYPE_SMOKEGRENADE_ammo", "Smoke Grenades")
@@ -201,6 +203,7 @@ function ParseCSScript(script)
         nswep.Base = "weapon_css_grenade"
         nswep.Category = "Counter-Strike:Source Misc"
     end
+
 
     nswep.ClassName = class
     nswep.PrintName = tab.printname
@@ -257,6 +260,20 @@ function ParseCSScript(script)
             continue
         end
     end
+
+    if(class == "weapon_deagle")then
+        nswep.HoldType = "revolver"
+    end
+    if(class == "weapon_elite")then
+        nswep.HoldType = "duel"
+    end
+    if(class == "weapon_mac10")then
+        nswep.HoldType = "pistol"
+    end
+    if(class == "weapon_tmp")then
+        nswep.HoldType = "pistol"
+    end
+
     nswep.ViewModelFlip = false
 end
 
@@ -280,6 +297,28 @@ for k, fl in pairs(file.Find("weapons/weapon_css/guns/*", "LUA")) do
         print(class,_G.SWEP.Primary.Ammo)
         MakeAmmo(_G.SWEP.Primary.Ammo)
     end 
+    _G.SWEP = nil 
+    _G.SWEP = table.Copy(weapons.Get(class))
+    local pgswep = table.Copy(weapons.Get(class))
+    if(pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver" and pgswep.Base == "weapon_css")then
+    SWEP.ClassName = class.."_dual"
+    _G.SWEP.DualWield = true
+    _G.SWEP.Base = pgswep.Base
+    _G.SWEP.PrintName = _G.SWEP.PrintName.."_dual"
+    
+    _G.SWEP.Primary.CycleTime = (_G.SWEP.Primary.CycleTime or 1) / 2 
+    _G.SWEP.Primary.ClipSize =  (_G.SWEP.Primary.ClipSize or 1) * 2 
+    _G.SWEP.Primary.DefaultClip = (_G.SWEP.Primary.DefaultClip or 1) * 2
+    _G.SWEP.ViewModelFlip2 = !_G.SWEP.ViewModelFlip 
+    _G.SWEP.HoldType = "duel"
+    _G.SWEP.UseHands = false
+    _G.SWEP.CanScope = false 
+    print(string.sub(_G.SWEP.PrintName.."_dual",2))
+    if(CLIENT)then language.Add(string.sub(_G.SWEP.PrintName,2), language.GetPhrase(pgswep.PrintName) .. " x 2") end
+
+    weapons.Register(_G.SWEP,class.."_dual")
+    end
+
 end
 end
 hook.Add("Initialize","LoadCSSweps",function() LoadGuns() end)

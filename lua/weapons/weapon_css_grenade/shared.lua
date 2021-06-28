@@ -11,6 +11,11 @@ function SWEP:CanPrimaryAttack()
     return self:Ammo1() > 0
 end
 
+function SWEP:Deploy()
+    self:SetHoldType(self.HoldType)
+end
+
+
 function SWEP:SetupDataTables() 
     self:NetworkVar("Float",0,"ThrowReady")
     self:NetworkVar("Float",1,"ThrowTime")

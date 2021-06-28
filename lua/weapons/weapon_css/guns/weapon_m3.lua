@@ -116,3 +116,52 @@
 	}
 }    ]])
     
+
+function SWEP:SetupDataTables()
+	self:NetworkVar("Int", 0, "Aiming")
+    self:NetworkVar("Bool", 0, "ShotgunLoad")
+end
+
+function SWEP:Reload()
+	if(self:GetNextPrimaryFire() > CurTime() )then return end
+	if(self:Ammo1() < 1)then return end
+
+	if(self:Clip1() >= self.Primary.ClipSize)then return end
+
+	
+	if(!self:GetShotgunLoad())then
+		self:SetNextPrimaryFire(CurTime() + 0.5)
+		self:SendWeaponAnim(ACT_VM_RELOAD)
+		self:SetShotgunLoad(true)
+		self.Owner:RemoveAmmo( 1, self.Weapon:GetPrimaryAmmoType() )
+		self:SetClip1(self:Clip1() + 1)
+		self:TimerCreate("LoadShells",0.5,1,function()
+			self:SendWeaponAnim(ACT_SHOTGUN_RELOAD_FINISH)
+			
+			
+			if(self:Clip1() < self.Primary.ClipSize and !self:GetOwner():KeyDown(IN_ATTACK))then
+				self:TimerSimple(0,function()
+				self:SetShotgunLoad(false)
+				self:Reload()
+				end)
+			else
+				self:SetShotgunLoad(false)
+				self:SendWeaponAnim(ACT_SHOTGUN_RELOAD_FINISH)
+				self:SetNextPrimaryFire(CurTime() + 1)
+			end
+		end)
+	end
+end
+
+function SWEP:PrimaryAttack()
+	if(self:GetShotgunLoad())then
+		return
+	end
+	self.BaseClass.PrimaryAttack(self)
+end
+function SWEP:Holster() 
+	self:SetShotgunLoad(false)
+	self:TimerRemove("LoadShells")
+    self:SetAiming(0)
+    return true
+end

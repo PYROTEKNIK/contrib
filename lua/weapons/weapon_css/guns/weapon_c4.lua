@@ -188,10 +188,8 @@ function SWEP:Holster()
 end
 
 function SWEP:Deploy()
-
-    self:SendWeaponAnim(ACT_VM_DEPLOY)
-
-    
+    self:SetHoldType(self.HoldType)
+    self:SendWeaponAnim(ACT_VM_DRAW)
 end
 
 function SWEP:SecondaryAttack()
