@@ -1,8 +1,8 @@
 ﻿-- This file is subject to copyright - contact swampservers@gmail.com for more information.
 -- INSTALL: CINEMA
 SS_Tab("Construction", "bricks")
-SS_Heading("Tools")
 
+-- SS_Heading("Tools")
 local function CannotBuyTrash(self, ply)
     if SERVER then return CannotMakeTrash(ply) end
 end
@@ -26,7 +26,7 @@ SS_WeaponProduct({
 SS_Product({
     class = 'trash',
     price = 0,
-    name = 'Trash',
+    name = 'Random Trash',
     description = "Spawn a random piece of junk for building stuff with",
     model = 'models/props_junk/cardboard_box001b.mdl',
     CannotBuy = CannotBuyTrash,
@@ -35,7 +35,87 @@ SS_Product({
     end
 })
 
-SS_Heading("Props")
+if SERVER then
+    util.AddNetworkString("LootBoxAnimation")
+end
+
+SS_Item({
+    class = "prop",
+    value = 5000,
+    name = "Prop",
+    description = "Haha, where did you find this one?",
+    model = 'models/maxofs2d/logo_gmod_b.mdl',
+    SellValue = function(self) return 250 * 2 ^ SS_GetRating(self.specs.rating).id end,
+    GetName = function(self) return string.sub(table.remove(string.Explode("/", self.specs.model)), 1, -5) end,
+    GetModel = function(self) return self.specs.model end,
+    OutlineColor = function(self) return SS_GetRating(self.specs.rating).color end,
+    SanitizeSpecs = function(self)
+        local specs, ch = self.specs, false
+
+        if not specs.model then
+            specs.model = GetSandboxProp()
+            ch = true
+        end
+
+        if not specs.rating then
+            specs.rating = math.random()
+            ch = true
+        end
+
+        return ch
+    end,
+    actions = {
+        spawnprop = {
+            primary = true,
+            Text = function(item) return "MAKE (-" .. tostring(item:SpawnPrice()) .. ")" end,
+        }
+    },
+    CanCfgColor = function(self) return (SS_GetRating(self.specs.rating).id >= 5) and 5.0 or false end,
+    CanCfgImgur = function(self) return SS_GetRating(self.specs.rating).id >= 7 end,
+    SpawnPrice = function(self) return 100 end,
+    invcategory = "Props",
+    never_equip = true
+})
+
+SS_Product({
+    class = 'sandbox',
+    price = 30000,
+    name = 'Sandbox Lootbox',
+    description = "A random prop that you can spawn from your inventory as much as you want (trading coming soon)",
+    model = 'models/Items/ammocrate_smg1.mdl',
+    CannotBuy = function(self, ply)
+        if ply:SS_CountItem("prop") >= 100 then return "Max 100 props, please sell some!" end
+    end,
+    OnBuy = function(self, ply)
+        -- if ply.CANTSANDBOX then return end
+        local item = SS_GenerateItem(ply, "prop")
+        ply:SS_GiveNewItem(item, 4)
+        local chosen = item.specs.model
+        assert(chosen)
+        local others = {}
+
+        for i = 1, 15 do
+            table.insert(others, GetSandboxProp())
+        end
+
+        net.Start("LootBoxAnimation")
+        net.WriteString(chosen)
+        net.WriteTable(others)
+
+        net.WriteTable({item:GetName(), "Features (UNFINISHED): " .. SS_GetRating(item.specs.rating).propnotes})
+
+        net.WriteFloat(item.specs.rating)
+        net.Send(ply)
+
+        -- ply.CANTSANDBOX = true
+        timer.Simple(4, function()
+            -- ply.CANTSANDBOX = false
+            makeTrash(ply, chosen)
+        end)
+    end
+})
+
+SS_Heading("More Props")
 
 SS_Product({
     class = 'plate1',
