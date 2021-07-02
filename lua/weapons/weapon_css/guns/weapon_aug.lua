@@ -129,3 +129,5 @@
 	}
 }    ]])
     
+SWEP.BoostBase = 64
+SWEP.SubMatID = 2
