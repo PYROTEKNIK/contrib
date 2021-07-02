@@ -327,7 +327,7 @@ local function LoadGuns()
 
         
         SWEP = table.Copy(pgswep)
-
+        --remove pgswep.HoldType != "1" if you don't want it generating silly dual wield weapons
         if (pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver" or pgswep.HoldType != "1" and pgswep.Base == "weapon_css") then
             SWEP.ClassName = SWEP.ClassName .. "_dual"
             SWEP.PrintName = SWEP.PrintName .. "_dual"
