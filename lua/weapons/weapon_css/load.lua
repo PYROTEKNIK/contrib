@@ -340,6 +340,7 @@ local function LoadGuns()
             SWEP.ViewModelHideLArm2 = true  
             
             SWEP.ViewModelFlip2 = not SWEP.ViewModelFlip
+            --dual wielded, but can only reload one gun at a time
             SWEP.DualSimulReload = pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver"
             SWEP.HoldType = "duel"
             SWEP.UseHands = true
