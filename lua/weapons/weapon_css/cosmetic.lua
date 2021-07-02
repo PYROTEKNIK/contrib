@@ -140,7 +140,7 @@ function SWEP:DrawWorldModel(flags)
 
     render.ModelMaterialOverride()
     render.MaterialOverrideByIndex((self.SubMatIDWorld or 1)-1)
-
+    -- i have no fucking clue why but checking this value before drawing the world model returns the viewmodel materials on the weapon's entity.
     if(self.WMat == nil)then
         local mat = self:GetMaterials()[self.SubMatIDWorld or 1]
         if(string.find(mat,"models/weapons/v_models/"))then return end
