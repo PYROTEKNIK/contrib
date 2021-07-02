@@ -101,11 +101,21 @@
 }    ]])
 
 SWEP.Primary.Ammo = "CS_C4"
-SWEP.Primary.DefaultClip = 1
+SWEP.Primary.DefaultClip = -1
 SWEP.Primary.ClipSize = -1
 SWEP.Secondary.Ammo = "none"
 SWEP.Secondary.Automatic = true
 SWEP.Projectile = "cs_c4"   
+
+function SWEP:Equip(ply)
+    if(ply:GetAmmoCount(self.Primary.Ammo) < 1)then
+    ply:GiveAmmo(1,self.Primary.Ammo)
+    end
+end
+
+function SWEP:EquipAmmo(ply)
+    ply:GiveAmmo(1,self.Primary.Ammo)
+end
 
 function SWEP:SetupDataTables()
     self:NetworkVar("Float",0,"ThrowReady")

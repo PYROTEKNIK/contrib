@@ -1,8 +1,14 @@
 AddCSLuaFile()
 
 SWEP.Spawnable = false
- 
-SWEP.Category = "Counter-Strike:Source"
+
+SWEP.Primary.DefaultClip = -1
+SWEP.Primary.ClipSize = -1
+SWEP.Secondary.Ammo = "none"
+SWEP.Secondary.Automatic = true
+SWEP.Secondary.ClipSize = -1
+SWEP.Secondary.DefaultClip = -1
+
 SWEP.Sounds = {}
 
 SWEP.Projectile = "npc_grenade_frag"
@@ -14,6 +20,7 @@ end
 function SWEP:Deploy()
     self:SetHoldType(self.HoldType)
 end
+
 
 
 function SWEP:SetupDataTables() 
@@ -37,8 +44,6 @@ end
 function SWEP:PrimaryAttack()
     -- Make sure we can shoot first
     if (not self:CanPrimaryAttack()) then return end
-
-
     if(self:GetThrowReady() == 0)then
         self:SendWeaponAnim(ACT_VM_PULLPIN)
         self:SetThrowReady(CurTime() + 1)
@@ -53,6 +58,7 @@ end
 function SWEP:EquipAmmo(ply)
     ply:GiveAmmo(1,self.Primary.Ammo)
 end
+
 
 function SWEP:Think()
     if(self:GetThrowReady() > 0)then
@@ -71,11 +77,15 @@ function SWEP:Think()
         self:SetThrowTime(0) 
         self.EmptyHand = true
     end
-    if(self.EmptyHand and CurTime() >= self:GetNextPrimaryFire() - 0.5)then
+    if(self.EmptyHand and CurTime() >= self:GetNextPrimaryFire() - 0.5 )then
+        if(self:Ammo1() > 0)then
         self:SendWeaponAnim(ACT_VM_DRAW)
         self.EmptyHand = false
+        else
+            if(SERVER)then self:Remove() end
+        end
     end
-    
+
 end
 
 function SWEP:SecondaryAttack()
