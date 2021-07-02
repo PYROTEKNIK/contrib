@@ -1,18 +1,16 @@
-
 local ConversionNumbers = function(NSWEP, key, value)
     NSWEP[key] = math.Round(tonumber(value), 5)
 end
 
 local ConversionStrings = function(NSWEP, key, value)
     NSWEP[key] = tostring(value)
-end 
+end
 
 local Conversion = {}
 
 Conversion["BuiltRightHanded"] = function(NSWEP, value)
-    NSWEP.ViewModelFlip = !tobool(value)
-
-end 
+    NSWEP.ViewModelFlip = not tobool(value)
+end
 
 Conversion["WeaponType"] = function(NSWEP, value)
     local holdtypes = {
@@ -26,7 +24,7 @@ Conversion["WeaponType"] = function(NSWEP, value)
         Grenade = "grenade",
         C4 = "slam"
     }
- 
+
     local slots = {
         Knife = 0,
         Pistol = 1,
@@ -42,6 +40,7 @@ Conversion["WeaponType"] = function(NSWEP, value)
     if (value == "SniperRifle") then
         NSWEP.CanScope = true
     end
+
     NSWEP.HoldType = holdtypes[value] or "pistol"
     NSWEP.Slot = slots[value] or 4
     NSWEP.WeaponType = value
@@ -55,9 +54,7 @@ Conversion["primary_ammo"] = function(NSWEP, value)
     NSWEP.Primary.Ammo = value
 end
 
-Conversion["secondary_ammo"] = function(NSWEP, value)
-    NSWEP.Secondary.Ammo = value
-end
+Conversion["secondary_ammo"] = function(NSWEP, value) end
 
 Conversion["clip_size"] = function(NSWEP, value)
     NSWEP.Primary.ClipSize = tonumber(value)
@@ -78,12 +75,10 @@ Conversion["TextureData"] = function(NSWEP, value)
 end
 
 Conversion["viewmodel"] = function(NSWEP, value)
-    NSWEP.ViewModel = string.Replace( value, "weapons/v_", "weapons/cstrike/c_" )
+    NSWEP.ViewModel = string.Replace(value, "weapons/v_", "weapons/cstrike/c_")
 end
 
 Conversion["playermodel"] = "WorldModel"
-
-
 REG_GUNS = REG_GUNS or {}
 
 local function lprepstring(string)
@@ -105,7 +100,6 @@ local KeySend = {
     ["Bullets"] = "Primary",
     ["CycleTime"] = "Primary",
 }
-
 
 if (CLIENT) then
     surface.CreateFont("CSweaponsSmall", {
@@ -147,7 +141,7 @@ if (CLIENT) then
     language.Add("Cstrike_WPNHUD_MP5", "MP5N")
     language.Add("Cstrike_WPNHUD_P228", "P228")
     language.Add("Cstrike_WPNHUD_P90", "FN P90")
-    language.Add("Cstrike_WPNHUD_Scout", "Scout") 
+    language.Add("Cstrike_WPNHUD_Scout", "Scout")
     language.Add("Cstrike_WPNHUD_SG550", "SG550")
     language.Add("Cstrike_WPNHUD_SG552", "SG552")
     language.Add("Cstrike_WPNHUD_Tmp", "TMP")
@@ -170,10 +164,27 @@ if (CLIENT) then
     language.Add("BULLET_PLAYER_BUCKSHOT_ammo", "Buckshot")
 end
 
+local nade = {
+    ["AMMO_TYPE_FLASHBANG"] = "weapon_flashbang",
+    ["AMMO_TYPE_HEGRENADE"] = "weapon_hegrenade",
+    ["AMMO_TYPE_SMOKEGRENADE"] = "weapon_smokegrenade",
+    ["CS_C4"] = "weapon_c4",
+}
+
+if (SERVER) then
+    hook.Add("PlayerAmmoChanged", "GiveGrenadesBack", function(ply, ammoid, old, new)
+        local wp = nade[game.GetAmmoName(ammoid)]
+
+        if (wp and not ply:HasWeapon(wp) and new > 0) then
+            ply:Give(wp)
+            ply:SetAmmo(old, ammoid)
+        end
+    end)
+end
 
 --i didnt think you'd want a shit ton of extra files going in the weapons folder
 local function MakeAmmo(ammo)
-    if(ammo == "none")then return end
+    if (ammo == "none") then return end
     CSS_AMMO = CSS_AMMO or {}
     if (CSS_AMMO[ammo]) then return end
     CSS_AMMO[ammo] = {}
@@ -189,31 +200,27 @@ local function MakeAmmo(ammo)
         maxsplash = 5
     })
 end
- 
 
 function ParseCSScript(script)
     local tab = util.KeyValuesToTable(script, false, true)
     local class = _G.SWEP.ClassName
-
-
     local nswep = _G.SWEP
-    nswep.Category = "Counter-Strike:Source ".. tab.WeaponType.."s"
+    nswep.Category = "Counter-Strike:Source " .. tab.WeaponType .. "s"
 
     if (tab.WeaponType == "Grenade" or tab.WeaponType == "C4" or tab.WeaponType == "Knife") then
         nswep.Base = "weapon_css_grenade"
         nswep.Category = "Counter-Strike:Source Misc"
     end
 
-
     nswep.ClassName = class
     nswep.PrintName = tab.printname
     nswep.IconOverride = "VGUI/gfx/VGUI/" .. string.Trim(class, "weapon_")
-    nswep.CSMuzzleFlashes = true    
+    nswep.CSMuzzleFlashes = true
     nswep.CSMuzzleX = tab.WeaponType == "Rifle"
-    nswep.UseHands = true    
+    nswep.UseHands = true
     nswep.ViewModelFlip = false
     nswep.Spawnable = true
-    
+
     for key, value in pairs(tab) do
         local t = nswep
 
@@ -226,29 +233,31 @@ function ParseCSScript(script)
             if (isstring(Conversion[key])) then
                 key = Conversion[key]
             end
-        end 
- 
+        end
+
         local ks = KeySend[key]
+
         local accuracytags = {
-            Spread=true,
-            SpreadAlt=true,
-            MaxInaccuracy= true,
-            RecoveryTimeStand=true,
-            RecoveryTimeCrouch=true,
+            Spread = true,
+            SpreadAlt = true,
+            MaxInaccuracy = true,
+            RecoveryTimeStand = true,
+            RecoveryTimeCrouch = true,
         }
+
         if (string.StartWith(key, "Accuracy") or string.StartWith(key, "Inaccuracy") or accuracytags[key]) then
             t.Primary = t.Primary or {}
             t = t.Primary
             t.Accuracy = t.Accuracy or {}
             t = t.Accuracy
             key = string.StartWith(key, "Accuracy") and string.Trim(key, "Accuracy") or key
-        end 
+        end
+
         if (ks) then
             --set up subtable
             t[ks] = t[ks] or {}
             t = t[ks]
         end
-
 
         if (tonumber(value)) then
             ConversionNumbers(t, key, value)
@@ -261,66 +270,100 @@ function ParseCSScript(script)
         end
     end
 
-    if(class == "weapon_deagle")then
+    if (class == "weapon_deagle") then
         nswep.HoldType = "revolver"
     end
-    if(class == "weapon_elite")then
+
+    if (class == "weapon_elite") then
         nswep.HoldType = "duel"
     end
-    if(class == "weapon_mac10")then
+
+    if (class == "weapon_mac10") then
         nswep.HoldType = "pistol"
     end
-    if(class == "weapon_tmp")then
+
+    if (class == "weapon_tmp") then
         nswep.HoldType = "pistol"
     end
 
     nswep.ViewModelFlip = false
 end
 
-
-
+local oldswep = table.Copy(SWEP)
+SWEP = nil
 
 local function LoadGuns()
-for k, fl in pairs(file.Find("weapons/weapon_css/guns/*", "LUA")) do
-    local filetype = string.Explode(".", fl)[1]
+    for k, fl in pairs(file.Find("weapons/weapon_css/guns/*", "LUA")) do
+        local filetype = string.Explode(".", fl)[1]
+        local class = string.Explode(".", fl)[1]
 
-    local class = string.Explode(".", fl)[1]
+        SWEP = {
+            Base = "weapon_css",
+            Primary = {
+                Ammo = "none",
+                ClipSize = -1,
+                DefaultClip = -1
+            },
+            Secondary = {
+                Ammo = "none",
+                ClipSize = -1,
+                DefaultClip = -1
+            },
+            Sounds = {},
+            ClassName = class
+        }
+        SWEP.Folder = "weapons/"..class
+        SWEP.ClassName = class
+        local script = "weapons/weapon_css/guns/" .. fl
+        AddCSLuaFile(script)
+        include(script)
+        local pgswep = table.Copy(SWEP)
 
-    _G.SWEP = {Base = "weapon_css",Primary={Ammo="none",ClipSize=-1,DefaultClip=-1},Secondary={Ammo="none",ClipSize=-1,DefaultClip=-1},Sounds={},ClassName = class}
-    local script = "weapons/weapon_css/guns/"..fl
-    AddCSLuaFile(script)
-    include(script)
- 
-    weapons.Register(_G.SWEP,class)
+        weapons.Register(SWEP, class)
 
-    if(_G.SWEP.Primary.Ammo)then
-        print(class,_G.SWEP.Primary.Ammo)
-        MakeAmmo(_G.SWEP.Primary.Ammo)
-    end 
-    _G.SWEP = nil 
-    _G.SWEP = table.Copy(weapons.Get(class))
-    local pgswep = table.Copy(weapons.Get(class))
-    if(pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver" and pgswep.Base == "weapon_css")then
-    SWEP.ClassName = class.."_dual"
-    _G.SWEP.DualWield = true
-    _G.SWEP.Base = pgswep.Base
-    _G.SWEP.PrintName = _G.SWEP.PrintName.."_dual"
-    
-    _G.SWEP.Primary.CycleTime = (_G.SWEP.Primary.CycleTime or 1) / 2 
-    _G.SWEP.Primary.ClipSize =  (_G.SWEP.Primary.ClipSize or 1) * 2 
-    _G.SWEP.Primary.DefaultClip = (_G.SWEP.Primary.DefaultClip or 1) * 2
-    _G.SWEP.ViewModelFlip2 = !_G.SWEP.ViewModelFlip 
-    _G.SWEP.HoldType = "duel"
-    _G.SWEP.UseHands = false
-    _G.SWEP.CanScope = false 
-    print(string.sub(_G.SWEP.PrintName.."_dual",2))
-    if(CLIENT)then language.Add(string.sub(_G.SWEP.PrintName,2), language.GetPhrase(pgswep.PrintName) .. " x 2") end
+        if (SWEP.Primary.Ammo) then
+            MakeAmmo(SWEP.Primary.Ammo)
+        end
 
-    weapons.Register(_G.SWEP,class.."_dual")
+        
+        SWEP = table.Copy(pgswep)
+
+        if (pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver" or pgswep.HoldType != "1" and pgswep.Base == "weapon_css") then
+            SWEP.ClassName = SWEP.ClassName .. "_dual"
+            SWEP.PrintName = SWEP.PrintName .. "_dual"
+            SWEP.Folder = SWEP.Folder .. "_dual"
+            SWEP.DualWield = true
+            SWEP.Secondary.Automatic = SWEP.Primary.Automatic
+            SWEP.AltViewmodelIndex = 2
+            SWEP.ViewModel2 = SWEP.ViewModel
+            SWEP.ViewModelHideLArm = true 
+            SWEP.ViewModelHideLArm2 = true  
+            
+            SWEP.ViewModelFlip2 = not SWEP.ViewModelFlip
+            SWEP.DualSimulReload = pgswep.HoldType == "pistol" or pgswep.HoldType == "revolver"
+            SWEP.HoldType = "duel"
+            SWEP.UseHands = true
+            SWEP.CanScope = false
+
+            if (CLIENT) then
+                language.Add(string.sub(SWEP.PrintName, 2), language.GetPhrase(pgswep.PrintName) .. " x 2")
+            end
+
+            weapons.Register(SWEP, SWEP.ClassName)
+        end
     end
+end
 
-end
-end
-hook.Add("Initialize","LoadCSSweps",function() LoadGuns() end)
-hook.Add("OnReloaded","LoadCSSweps",function() LoadGuns() end)
-timer.Simple(0,function() LoadGuns() end)
+SWEP = oldswep
+
+hook.Add("Initialize", "LoadCSSweps", function()
+    LoadGuns()
+end)
+
+hook.Add("OnReloaded", "LoadCSSweps", function()
+    LoadGuns()
+end)
+
+timer.Simple(0, function()
+    LoadGuns()
+end)

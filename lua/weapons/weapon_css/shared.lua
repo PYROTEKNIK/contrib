@@ -1,15 +1,8 @@
 AddCSLuaFile()
 
-include("cosmetic.lua")
-AddCSLuaFile("cosmetic.lua")
 
 
-
-include("load.lua")
-AddCSLuaFile("load.lua")
-
-
-
+SWEP.Base = "weapon_base"
 SWEP.Primary.Ammo = "none"
 SWEP.Primary.Automatic = false
 SWEP.Primary.DefaultClip = 5
@@ -21,10 +14,14 @@ SWEP.Secondary.DefaultClip = -1
 SWEP.Spawnable = false
 SWEP.Category = "Counter-Strike:Source"
 SWEP.Sounds = {}
+SWEP.AltViewmodelIndex = 2
+
 
 function SWEP:Initialize()
     self:SetWeaponHoldType(self.HoldType)
-
+    if(self.DualWield)then
+        self:SetClip2(math.min(self.Primary.ClipSize))
+    end
 end
 
 function SWEP:FireAnimationEvent( pos, ang, event, options )
@@ -42,32 +39,40 @@ function SWEP:IsMoving()
  
     return ply:GetVelocity():Length() > 45
 end
- 
-function SWEP:Deploy()
-    local ply = self:GetOwner()
-    if(self.DualWield)then 
-    ply:GetViewModel( 2 ):SetWeaponModel( self.ViewModel, ply:GetActiveWeapon() )
-    end
-    self:SetHoldType(self.HoldType)
-    self:PlaySequence(ACT_VM_DRAW)
 
+function SWEP:GetBaseClass()
+    local base = weapons.GetStored(self.BaseClass.Base)
+
+    return base
 end
+
+function SWEP:GetOffhand()
+    local ply = self:GetOwner()
+    return ply:GetNWEntity("OffHandEntity")
+end
+
+function SWEP:Deploy()
+    self:GetBaseClass().Deploy(self)
+    local ply = self:GetOwner()
+    self:SetHoldType(self.HoldType)
+    self:SendWeaponAnim(ACT_VM_DRAW)
+    if(self.DualWield)then self:SendWeaponAnim(ACT_VM_DRAW,self.AltViewmodelIndex) end
+    return true
+end
+
+function SWEP:Holster() 
+    self:GetBaseClass().Holster(self)
+    local ply = self:GetOwner()
+    self:SetAiming(0)
+    return true
+end
+
+
+
 
 SWEP.SendWeaponAnim_orgin = FindMetaTable("Weapon").SendWeaponAnim
 
 function SWEP:PlaySequence(act,fire)
-    if(!self.DualWield)then self:SendWeaponAnim(act) return end
-    self.DuelAlternate = !self.DuelAlternate
-    local ply = self:GetOwner()
-    if(self.DuelAlternate or !fire)then
-        if(fire)then ply:GetViewModel( 2 ):SendViewModelMatchingSequence(ply:GetViewModel( 2 ):SelectWeightedSequence(ACT_VM_IDLE))  end
-        self:SendWeaponAnim(act)
-        
-    end
-    if(!self.DuelAlternate or !fire)then
-        if(fire)then self:SendWeaponAnim(ACT_VM_IDLE) end
-        ply:GetViewModel( 2 ):SendViewModelMatchingSequence(ply:GetViewModel( 2 ):SelectWeightedSequence(act))
-    end
     
 end
 
@@ -81,7 +86,7 @@ function SWEP:GetViewModelPosition(pos, ang)
     pos = pos + ang:Up()*-1
     local reload = vm:GetSequenceActivity(vm:GetSequence()) == ACT_VM_RELOAD and vm:GetCycle() <= 0.8
     self.RelDropLerp = math.Approach(self.RelDropLerp or 0 , reload and 1 or 0,FrameTime()*0.3)
-    ang:RotateAroundAxis(ang:Right(),-40*self.RelDropLerp)
+    --ang:RotateAroundAxis(ang:Right(),-40*self.RelDropLerp)
 	
 	return pos, ang
 end
@@ -170,12 +175,51 @@ function SWEP:GetAimVector()
     return aimv
 end
 
+function SWEP:CustomAmmoDisplay()
+    self.AmmoDisplay = self.AmmoDisplay or {} 
+	self.AmmoDisplay.Draw = true //draw the display?
+    self.AmmoDisplay.PrimaryClip = self:Clip1()
+    self.AmmoDisplay.PrimaryAmmo = self:Ammo1()
+    
+    self.AmmoDisplay.SecondaryAmmo = self:Clip2()
+
+    return self.AmmoDisplay
+end
+
+function SWEP:StandardReload(act,alt)
+    if(!self.DualWield and alt)then return end
+    local vm = alt and self.AltViewmodelIndex or 0
+    local vmo = self:GetOwner():GetViewModel(vm)
+    local seq = vmo:SelectWeightedSequence(act)
+    local clip = alt and 2 or 1
+    local dur = vmo:SequenceDuration(seq)
+    local ary = alt and "Secondary" or "Primary"
+    if( self["Reloading"..ary] )then return end
+    self:GetOwner():SetAnimation(PLAYER_RELOAD)
+    self:SendWeaponAnim(act,vm)
+    self["SetNext"..ary.."Fire"](self,CurTime() + dur)
+    self["Reloading"..ary] = true 
+    self:TimerCreate(self:GetClass()..self:EntIndex().."reload"..vm,dur,1,function()
+        self["Reloading"..ary] = nil 
+        self["SetClip"..clip](self,math.min(self.Primary.ClipSize,self:Ammo1()))
+    end)
+end
+
 function SWEP:Reload()
+    if(!self.DualSimulReload and (self.ReloadingPrimary or self.ReloadingSecondary))then return end
+
     if(self:Ammo1() > 0 and self:Clip1() < self.Primary.ClipSize)then
-    self:DefaultReload(ACT_VM_RELOAD)
-    self:PlaySequence(ACT_VM_RELOAD)
+    self:StandardReload(ACT_VM_RELOAD)
+    if(!self.DualSimulReload)then return end
+    end
+    if(!self.DualWield and alt)then return end
+    if(self:Ammo1() > 0 and self:Clip2() < self.Primary.ClipSize)then
+        self:StandardReload(ACT_VM_RELOAD,true)
     end
 end
+
+
+
 
 function SWEP:ShootBullet(damage, num_bullets, aimcone, ammo_type, force, tracer)
     local bullet = {}
@@ -190,19 +234,13 @@ function SWEP:ShootBullet(damage, num_bullets, aimcone, ammo_type, force, tracer
     bullet.AmmoType = ammo_type or self.Primary.Ammo
     self:FireBullets(bullet)
     self:MuzzleFlash()
-    self:PlaySequence(ACT_VM_PRIMARYATTACK,true)
-end
-
-function SWEP:CanPrimaryAttack()
-
-    return self:Clip1() > 0
 
 end
 
-function SWEP:PrimaryAttack()
+
+
+function SWEP:ShootGun(alt)
     -- Make sure we can shoot first
-    if (not self:CanPrimaryAttack()) then return end
-
     -- Play shoot sound
     if (self.Sounds.single_shot) then
         self:EmitSound(self.Sounds.single_shot)
@@ -216,18 +254,71 @@ function SWEP:PrimaryAttack()
     end 
 
     self:GetOwner():SetAnimation(PLAYER_ATTACK1)
-    self:ShootBullet(self.Damage, self.Primary.Bullets, self:GetSpread(), self.Primary.Ammo)
+    self:ShootBullet(self.Primary.Damage, self.Primary.Bullets, self:GetSpread(), self.Primary.Ammo)
+    self:SendWeaponAnim(ACT_VM_PRIMARYATTACK,alt and self.AltViewmodelIndex or 0)
+
     self:AddSpread()
-    self:TakePrimaryAmmo(1)
-    self:SetNextPrimaryFire(CurTime() + self.Primary.CycleTime)
+
+    self:TakeClip(1,alt)
+    local ary = alt and "Secondary" or "Primary"
+    self["SetNext"..ary.."Fire"](self,CurTime() + self.Primary.CycleTime)
 end
 
 function SWEP:SetupDataTables()
     self:NetworkVar("Int", 0, "Aiming")
+    self:NetworkVar("Int", 1, "Clip2")
+    
 end
-  
+function SWEP:Clip2()
+    return self:GetClip2()
+end
+
+
+function SWEP:CanPrimaryAttack()
+    return self:CanShoot()
+end
+
+function SWEP:CanSecondaryAttack()
+    if(self.DualWield)then return self:CanShoot(true) end
+    return self.CanScope
+end
+
+function SWEP:CanShoot(alt)
+    local c = alt and 2 or 1
+    local ary = alt and "Secondary" or "Primary"
+    if(self["Clip"..c](self) <= 0)then
+        if(self:Ammo1() > 0)then
+            self:StandardReload(ACT_VM_RELOAD,alt)
+        end
+
+    return false 
+    end
+    if(self["GetNext"..ary.."Fire"](self) > CurTime())then return false end
+    return true
+end
+
+
+
+function SWEP:TakeClip(amount,alt)
+    local c = alt and 2 or 1
+    self["SetClip"..c](self,self["Clip"..c](self) - amount)
+end
+
+
+function SWEP:PrimaryAttack()
+    if (not self:CanShoot()) then return end
+    self:ShootGun()
+end
+
 function SWEP:SecondaryAttack()
+    if(self.DualWield)then 
+    if (not self:CanShoot(true)) then return end
+    self:ShootGun(true)
+    return 
+    end
+
    if(!self.CanScope)then return end
+
     self:SetAiming(self.AimFOV[self:GetAiming() + 1] and self:GetAiming() + 1 or 0)
 
     if (self.Sounds.special3) then
@@ -236,6 +327,7 @@ function SWEP:SecondaryAttack()
 
     self:SetNextSecondaryFire(CurTime() + 0.1)
 end
+
 
 SWEP.AimFOV = {30,15}
 SWEP.AimSens = {0.2,0.1}
@@ -247,15 +339,6 @@ end
 function SWEP:AdjustMouseSensitivity()
     return self.AimSens[self:GetAiming()]
 end
-function SWEP:Holster() 
-    local ply = self:GetOwner()
-    if(self.DualWield)then 
-        ply:GetViewModel( 2 ):SetWeaponModel( self.ViewModel, nil )
-    end
-    self:SetAiming(0)
-    return true
-end
-
 
 
 
@@ -320,8 +403,9 @@ function SWEP:DoDrawCrosshair(x, y)
 
     end
 
-    if (self:GetAiming()) then return true end
-    if (not self.CrosshairInfo) then return true end
+    if (self:GetAiming() > 0) then return true end
+    if (not self.CrosshairInfo or true) then return true end
+
     local info = self.CrosshairInfo
     local w, h = info.width, info.height
 
@@ -342,6 +426,13 @@ function SWEP:DoDrawCrosshair(x, y)
 
     return true
 end
+
+
+include("cosmetic.lua")
+AddCSLuaFile("cosmetic.lua")
+
+include("load.lua")
+AddCSLuaFile("load.lua")
 
 
 ----------------------------------------- 
