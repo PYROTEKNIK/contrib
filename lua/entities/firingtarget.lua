@@ -91,10 +91,15 @@ end
             ent.SpawnedByRange = true 
         end
     end 
-    timer.Simple(0,function()
-    TargetSequence(testseq2)
-    end) 
+    concommand.Add("firing_setsequence",function(ply,cmd,args)
+    
+        local num = tonumber(args[1])
+    
+        TargetSequence((num == 1 and testseq) or (num == 2 and testseq2) or (num == 3 and testseq3))
+    end)
 end
+
+
 
 function ENT:Initialize()
     self:SetModel(self.Model)
