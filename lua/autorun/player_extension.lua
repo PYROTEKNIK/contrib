@@ -26,6 +26,20 @@ function PLAYER:GetTheater()
     return theater.GetByLocation(self:GetLocation())
 end
 
+--War Specific Stuff
+
+function PLAYER:IsUnderground()
+    return self:GetLocationTable().Underground or false
+end
+
+
+
+function PLAYER:GetTerritory()
+    return Location.GetTerritory(self:GetLocation())
+end
+
+
+
 function PLAYER:SetLocation(locationId)
     self.LastLocation = self:GetLocation()
 
