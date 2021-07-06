@@ -2,10 +2,12 @@
 -- INSTALL: CINEMA
 local PANEL = {}
 
+--NOMINIFY
 function PANEL:Init()
     self:SetModel(LocalPlayer():GetModel())
     self.Angles = Angle(0, 0, 0)
     self.ZoomOffset = 0
+    self:SetFOV(30)
 end
 
 function PANEL:OnMouseWheeled(amt)
@@ -67,7 +69,6 @@ function PANEL:LayoutEntity(thisEntity)
                         crangm:Invert()
                         nlangm = crangm * ngangm
                         nlang = nlangm:GetAngles()
-                        print(nlang)
                         XRSL:SetValue(nlang.x)
                         YRSL:SetValue(nlang.y)
                         ZRSL:SetValue(nlang.z)
@@ -76,6 +77,21 @@ function PANEL:LayoutEntity(thisEntity)
             end
         end
 
+        --[[ this shit isnt ready yet
+        if self.PressButton == MOUSE_MIDDLE and SS_CustomizerPanel:IsVisible() and ValidPanel(XSL) and IsValid(SS_HoverCSModel) then
+            local ofs = Vector(XSL:GetValue(), YSL:GetValue(), ZSL:GetValue())
+            local attach = (SS_CustomizerPanel.item.cfg[SS_CustomizerPanel.wear] or {}).attach or (pone and (SS_CustomizerPanel.item.wear.pony or {}).attach) or SS_CustomizerPanel.item.wear.attach
+            local angpos = self.Entity:GetAttachment(self.Entity:LookupAttachment(attach))
+            local apos, aang = LocalToWorld(ofs, Angle(), angpos.Pos, angpos.Ang)
+            local camang = (self:GetLookAt() - self:GetCamPos()):Angle()
+            apos = apos + camang:Right() * (mx + (self.PressX or mx)) * 0.3
+            apos = apos + camang:Up() * (my + (self.PressY or my)) * 0.3
+            apos, aang = WorldToLocal(apos, aang, angpos.Pos, angpos.Ang)
+            XSL:SetValue(apos.x)
+            YSL:SetValue(apos.y)
+            ZSL:SetValue(apos.z)
+        end
+        ]]
         self.PressX, self.PressY = gui.MousePos()
     end
 
@@ -150,7 +166,7 @@ function PANEL:Paint()
     local mdl = ply:GetModel()
 
     if SS_HoverIOP and (not SS_HoverIOP.wear) and (not SS_HoverIOP.playermodelmod) then
-        mdl = SS_HoverIOP.model
+        mdl = SS_HoverIOP:GetModel()
     end
 
     require_workshop_model(mdl)
@@ -169,6 +185,7 @@ function PANEL:Paint()
         end
 
         SS_PreviewShopModel(self, SS_HoverIOP)
+        self:SetCamPos(self:GetCamPos() * 2)
         self.Entity:DrawModel()
 
         if SS_HoverItem then
@@ -206,6 +223,7 @@ function PANEL:Paint()
 
         SS_ApplyBoneMods(self.Entity, mods)
         SS_ApplyMaterialMods(self.Entity, mods)
+        self.Entity:SetEyeTarget(self:GetCamPos())
         self.Entity:DrawModel()
     end
 
@@ -233,9 +251,22 @@ function PANEL:Paint()
     if SS_CustomizerPanel:IsVisible() then
         if ValidPanel(XRSL) then
             if IsValid(SS_HoverCSModel) then
-                draw.SimpleText("RMB + drag to rotate", "SS_DESCFONT", self:GetWide() / 2, 14, SS_SwitchableColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("RMB + drag to rotate", "SS_DESCFONT", self:GetWide() / 2, 14, MenuTheme_TX, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
         end
+    end
+end
+
+function PANEL:PaintOver(w, h)
+    if IsValid(SS_DescriptionPanel) then
+        _, h = SS_DescriptionPanel:GetPos()
+    end
+
+    -- print(w,h)
+    -- surface.SetDrawColor(255,0,0,255)
+    -- surface.DrawRect(0,h-10,w,10)
+    if SS_HoverIOP then
+        SS_DrawIOPInfo(SS_HoverIOP, 0, h, w, MenuTheme_TX, 1)
     end
 end
 

@@ -4,93 +4,268 @@ SWEP.PrintName = "Infinity Gauntlet"
 SWEP.Instructions = "*snap*"
 SWEP.Slot = 0
 SWEP.SlotPos = 0
-SWEP.DrawAmmo = false
+SWEP.DrawAmmo = true
 SWEP.m_WeaponDeploySpeed = 9
 SWEP.ViewModel = "models/swamp/v_infinitygauntlet.mdl"
 SWEP.WorldModel = "models/swamp/v_infinitygauntlet.mdl"
+SWEP.ViewModelFlip = false
 --SWEP.ViewModelFOV           = 60
 SWEP.Spawnable = true
-SWEP.Primary.ClipSize = -1
-SWEP.Primary.DefaultClip = -1
-SWEP.Primary.Automatic = false
-SWEP.Primary.Ammo = "none"
+SWEP.Primary.ClipSize = 0
+SWEP.Primary.DefaultClip = 1
+SWEP.Primary.Automatic = true
+SWEP.Primary.Ammo = "infinitygauntlet"
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = false
 SWEP.Secondary.Ammo = "none"
+SWEP.Instructions = "Hold left mouse button to snap. wait time is based on target's health."
+SWEP.ChargeSound = Sound("ambient/machines/transformer_loop.wav")
+SWEP.TargetCone = 15
 
-function GauntletFizzlePlayer(self, target, attacker)
+--NOMINIFY
+if (CLIENT) then
+    language.Add("infinitygauntlet_ammo", "Comedy Stones")
+end
+
+hook.Add("Initialize", "InfinityGauntletAmmo", function()
+    game.AddAmmoType({
+        name = "infinitygauntlet",
+        dmgtype = DMG_DISSOLVE,
+    })
+end)
+
+function SWEP:SetupDataTables()
+    self:NetworkVar("Entity", 0, "LockTarget")
+    self:NetworkVar("Int", 0, "Charge")
+end
+
+function SWEP:Initialize()
+end
+
+function SWEP:GetMaxCharge()
+    if (not IsValid(self:GetTarget())) then return 1 end
+
+    return 5 + (self:GetTarget():Health() / 40)
+end
+
+function SWEP:DoDrawCrosshair(x, y)
+    if (not self:CanPrimaryAttack()) then return true end
+    local ply = self:GetOwner()
+    local target = self:GetTarget()
+    local dir = ply:GetAimVector():Angle()
+    dir:RotateAroundAxis(dir:Up(), self.TargetCone)
+    local maxrad = 0
+    local data2D = (EyePos() + (dir:Forward() * 100)):ToScreen() -- Gets the position of the entity on your screen
+
+    if (data2D.visible) then
+        maxrad = Vector(x, y, 0):Distance(Vector(data2D.x, data2D.y, 0))
+    end
+
+    local chg = self:GetCharge() * 1.1
+    local rd = (chg / self:GetMaxCharge())
+    self.RadiusLerp = Lerp(0.1, self.RadiusLerp or rd, rd)
+    rd = self.RadiusLerp
+    surface.DrawCircle(x, y, maxrad * (1 - rd), Color(128, 0, 255, 255 * rd))
+    --surface.DrawCircle( x, y, maxrad , Color(128, 128, 128,64) )
+
+    return true
+end
+
+local meta = FindMetaTable("Player")
+
+function meta:Fizzle(attacker, inflictor, damage)
     if SERVER then
-        if (target:InVehicle()) then
-            target:ExitVehicle()
+        if (self:InVehicle()) then
+            self:ExitVehicle()
         end
 
         local dmginfo = DamageInfo()
-        dmginfo:SetDamage(100)
+        dmginfo:SetDamage(damage or self:Health())
         dmginfo:SetDamageType(DMG_DISSOLVE)
-        dmginfo:SetAttacker(attacker)
+        dmginfo:SetAttacker(attacker or game.GetWorld())
         dmginfo:SetDamageForce(Vector(0, 0, 1))
-        dmginfo:SetInflictor(self)
-        target:TakeDamageInfo(dmginfo)
-        attacker:EmitSound("gauntlet/snap.wav", 100)
+        dmginfo:SetInflictor(inflictor or game.GetWorld())
+        self:TakeDamageInfo(dmginfo)
+    end
+end
 
-        timer.Simple(0, function()
-            if IsValid(self) then
-                self:Remove()
+function SWEP:Equip(ply)
+end
+
+function SWEP:EquipAmmo(ply)
+end
+
+function SWEP:Snap()
+    self:GetOwner():SetAnimation(PLAYER_ATTACK1)
+
+    if (SERVER) then
+        self:GetOwner():EmitSound("gauntlet/snap.wav", 100)
+        util.ScreenShake(self:GetOwner():GetPos(), 1, 2, 0.2, 300)
+    end
+
+    local target = self:GetTarget()
+
+    if (IsValid(target)) then
+        target:Fizzle(self:GetOwner(), self)
+        self:GetOwner():RemoveAmmo(1, "infinitygauntlet")
+
+        self:TimerSimple(0.5, function()
+            if (SERVER and self:Ammo1() <= 0) then
+                if IsValid(self) then
+                    self:Remove()
+                end
             end
         end)
     end
 end
 
-function TestFizzleDeath(self, target, attacker)
-    if not Safe(target) then
-        GauntletFizzlePlayer(self, target, attacker)
-    elseif attacker:GetTheater() and attacker:GetTheater():IsPrivate() and attacker:GetTheater():GetOwner() == attacker and attacker:GetLocationName() == target:GetLocationName() then
-        GauntletFizzlePlayer(self, target, attacker)
-    else
-        return
+function SWEP:CanTarget(v)
+    if (not v:IsPlayer()) then return false end
+    if (Safe(v)) then return false end
+    if (not v:Alive()) then return false end
+    if (v == self:GetOwner()) then return false end
+    local ply = self.Owner
+    if (theater and ply:GetTheater() and ply:GetTheater():IsPrivate() and ply:GetTheater():GetOwner() ~= ply and ply:GetLocationName() == v:GetLocationName()) then return false end
+    if (not self:GetTargetNearness(v)) then return false end
+
+    return true
+end
+
+function SWEP:GetTargetNearness(v)
+    local ply = self:GetOwner()
+    local otherpos = v:LocalToWorld(v:OBBCenter())
+    local a = ply:GetAimVector()
+    local b = (otherpos - ply:GetShootPos()):GetNormalized()
+    local dis = otherpos:Distance(ply:GetShootPos()) / 20
+    local cn = math.deg(math.acos(a:Dot(b)))
+    if (cn > self.TargetCone) then return end
+    if (dis * 20 > 1000) then return end --2000
+
+    return cn + dis
+end
+
+function SWEP:GetTarget()
+    local eyetrace = self.Owner:GetEyeTrace()
+    local lock = self:GetLockTarget()
+    if (IsValid(lock)) then return self:CanTarget(lock) and self:GetLockTarget() end
+
+    local target = {nil, 10000}
+
+    local ply = self:GetOwner()
+    local allply = player.GetAll()
+    local tracepos = ply:GetEyeTrace().HitPos
+
+    for k, v in pairs(allply) do
+        local otherpos = v:LocalToWorld(v:OBBCenter())
+        if (not self:CanTarget(v)) then continue end
+        local near = self:GetTargetNearness(v)
+
+        if (near and near < target[2]) then
+            local tr = util.TraceLine({
+                start = ply:GetShootPos(),
+                endpos = otherpos,
+                filter = {ply, v}
+            })
+
+            local tr2 = util.TraceLine({
+                start = ply:GetShootPos(),
+                endpos = v:EyePos(),
+                filter = {ply, v}
+            })
+
+            if (not tr.Hit or not tr2.Hit) then
+                target = {v, near}
+            end
+        end
     end
+
+    if (target[1]) then return target[1] end
+end
+
+hook.Add("PreDrawHalos", "InfinityGauntletHalo", function()
+    if (LocalPlayer():UsingWeapon("weapon_gauntlet")) then
+        local wep = LocalPlayer():GetWeapon("weapon_gauntlet")
+        if (wep:GetNextPrimaryFire() - 0.4 > CurTime()) then return end
+        local ply = wep:GetTarget()
+
+        if (IsValid(ply)) then
+            local tb = {ply}
+
+            if (ply.GetActiveWeapon and IsValid(ply:GetActiveWeapon())) then
+                tb[2] = ply:GetActiveWeapon()
+            end
+
+            local rd = wep:GetCharge() / wep:GetMaxCharge()
+            halo.Add(tb, Color(128, 0, 255), 2, 2, 2, true, true)
+
+            if (rd > 0) then
+                local rad = (rd * 8)
+                halo.Add(tb, Color(128, 0, 255, 255 * rd), rad, rad, 10, true, true)
+            end
+        end
+    end
+end)
+
+function SWEP:CanPrimaryAttack()
+    return self:GetOwner():GetAmmoCount("infinitygauntlet") > 0 and IsValid(self:GetTarget())
 end
 
 function SWEP:PrimaryAttack()
-    local eyetrace = self.Owner:GetEyeTrace()
+    local target = self:GetTarget()
+    if (not self:CanPrimaryAttack()) then return end
 
-    if eyetrace.Hit then
-        if (eyetrace.Entity:IsPlayer() and eyetrace.Entity:Alive()) then
-            TestFizzleDeath(self, eyetrace.Entity, self.Owner)
-        else
-            local target = {nil, 50}
+    if (SERVER) then
+        SuppressHostEvents(self:GetOwner())
+    end
 
-            local allply = player.GetAll()
-            local tracepos = self.Owner:GetEyeTrace().HitPos
+    if (not IsValid(self:GetLockTarget())) then
+        self:SetLockTarget(self:GetTarget())
+    end
 
-            for k, v in pairs(allply) do
-                if (v:Alive() and v ~= self.Owner) then
-                    local otherpos = v:LocalToWorld(v:OBBCenter())
-                    local dis = tracepos:Distance(otherpos)
+    if (self:GetCharge() == 0) then
+        self:EmitSound(self.ChargeSound, nil, math.Rand(90, 110), 0.6, CHAN_WEAPON)
+        util.ScreenShake(self:GetOwner():GetPos(), 0.5, 1, 0.2, 300)
+    end
 
-                    if (dis < target[2]) then
-                        local tr = util.TraceLine({
-                            start = tracepos,
-                            endpos = otherpos,
-                            filter = allply
-                        })
+    self:SetCharge(self:GetCharge() + 1)
 
-                        if tr.Hit then continue end
+    if (self:GetCharge() >= self:GetMaxCharge()) then
+        self:Snap()
+        self:SetCharge(0)
+        self:SetNextPrimaryFire(CurTime() + 0.3)
+        self:StopSound(self.ChargeSound)
+        self:SetLockTarget(nil)
+    else
+        self:SetNextPrimaryFire(CurTime() + 0.05)
 
-                        target = {v, dis}
-                    end
-                end
+        self:TimerCreate("SnapExpire", 0.2, 1, function()
+            if (SERVER) then
+                SuppressHostEvents(self:GetOwner())
             end
 
-            if (target[2] < 50) then
-                TestFizzleDeath(self, target[1], self.Owner)
+            self:SetLockTarget(nil)
+            self:StopSound(self.ChargeSound)
+            self:SetCharge(0)
+
+            if (SERVER) then
+                SuppressHostEvents()
             end
-        end
+
+            self:SetNextPrimaryFire(CurTime() + 0.5)
+        end)
+    end
+
+    if (SERVER) then
+        SuppressHostEvents()
     end
 end
 
 function SWEP:SecondaryAttack()
+end
+
+function SWEP:OnRemove()
+    self:StopSound(self.ChargeSound)
 end
 
 function SWEP:Reload()
@@ -98,11 +273,6 @@ end
 
 function SWEP:Deploy()
     self:SetHoldType("fist")
-end
-
-function SWEP:DrawHUD()
-    surface.DrawCircle(ScrW() / 2, ScrH() / 2, 2, Color(0, 0, 0, 25))
-    surface.DrawCircle(ScrW() / 2, ScrH() / 2, 1, Color(255, 255, 255, 10))
 end
 
 function SWEP:CreateWorldModel()
@@ -115,7 +285,20 @@ function SWEP:CreateWorldModel()
     return self.WModel
 end
 
+if (CLIENT) then
+    gauntletglow = CreateMaterial("gauntletglow", "UnlitGeneric", {
+        ["$basetexture"] = "sprites/light_glow02",
+        ["$model"] = 1,
+        ["$additive"] = 1,
+        ["$translucent"] = 1,
+        ["$color2"] = Vector(4, 4, 4),
+        ["$vertexalpha"] = 1,
+        ["$vertexcolor"] = 1
+    })
+end
+
 function SWEP:DrawWorldModel()
+    if (not IsValid(self:GetOwner())) then return end
     local wm = self:CreateWorldModel()
     local bone = self.Owner:LookupBone("ValveBiped.Bip01_L_Hand") or 0
     local opos = self:GetPos()
@@ -128,6 +311,17 @@ function SWEP:DrawWorldModel()
 
     if (ba) then
         oang = ba
+    end
+
+    local spos = opos + oang:Forward() * 4
+    render.SetMaterial(gauntletglow)
+    local rd = 0 --math.Clamp(self:GetCharge() / self:GetMaxCharge(), 0, 1)
+    local size = 32 + (rd * 32)
+
+    if (rd > 0) then
+        for i = 1, math.Round(rd * 16) do
+            render.DrawQuadEasy(spos + VectorRand() * 4 * rd, -EyeAngles():Forward(), size, size, Color(136, 17, 255), math.Rand(0, 360))
+        end
     end
 
     wm:SetModelScale(3.5)

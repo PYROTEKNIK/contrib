@@ -4,6 +4,7 @@ local Player = FindMetaTable('Player')
 local Entity = FindMetaTable('Entity')
 SS_MaterialCache = {}
 
+--NOMINIFY
 function SS_GetMaterial(nam)
     SS_MaterialCache[nam] = SS_MaterialCache[nam] or Material(nam)
 
@@ -15,6 +16,7 @@ function SS_PreRender(item)
         local imat = ImgurMaterial({
             id = item.cfg.imgur.url,
             owner = item.owner,
+            worksafe = true,
             pos = IsValid(item.owner) and item.owner:IsPlayer() and item.owner:GetPos(),
             stretch = true,
             shader = "VertexLitGeneric",
@@ -28,10 +30,12 @@ function SS_PreRender(item)
 
         if mat then
             render.MaterialOverride(SS_GetMaterial(mat))
+        else
+            render.MaterialOverride()
         end
     end
 
-    local col = item.cfg.color or item.color
+    local col = (item.GetColor and item:GetColor()) or item.cfg.color or item.color
 
     if col then
         render.SetColorModulation(col.x, col.y, col.z)
@@ -175,6 +179,7 @@ function SS_ApplyMaterialMods(ent, mods)
             local mat = ImgurMaterial({
                 id = (item.cfg.imgur or {}).url or "EG84dgp.png",
                 owner = ent,
+                worksafe = true,
                 pos = IsValid(ent) and ent:IsPlayer() and ent:GetPos(),
                 stretch = true,
                 shader = "VertexLitGeneric",

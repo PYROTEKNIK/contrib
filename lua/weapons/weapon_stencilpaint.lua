@@ -15,6 +15,8 @@ SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = false
 SWEP.Secondary.Ammo = "none"
+SWEP.ViewModel = Model("models/pyroteknik/v_spraypaint.mdl")
+SWEP.WorldModel = Model("models/pyroteknik/w_spraypaint.mdl")
 SWEP.PaintDelay = 0.25
 SWEP.SlotPos = 101
 SWEP.WindowTitle = "Pick a Stencil (You can use your keyboard to choose)"
@@ -58,6 +60,10 @@ function SWEP:GetCurrentDecal()
     local ply = self:GetOwner()
     local decal = ply:GetInfo(self.ConVar)
     if (SPRAYPAINT_STENCILS_WHITELIST[decal]) then return decal end
+    -- if decal~="" and ply==LocalPlayer() then
+    --     net.Start("BanMe")
+    --     net.SendToServer()
+    -- end
 
     return "stencil_decal27"
 end
