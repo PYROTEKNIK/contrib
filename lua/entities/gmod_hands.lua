@@ -58,7 +58,7 @@ function ENT:ViewModelChanged( vm, old, new )
 	if ( self:GetParent() != vm ) then return end
 	
 	self:AttachToViewmodel( vm )
-	self:SetHideLeft()
+	
 
 
 end
@@ -71,7 +71,7 @@ local function HideBone(ent,bone)
 	bm:Scale(Vector(1,1,1)*0.01)
 	ent:SetBoneMatrix(bone,bm)
 	for k,v in pairs(ent:GetChildBones( bone ))do
-		HideBone(ent,v)
+		HideBone(ent,v) 
 	end
 end
 
@@ -81,7 +81,7 @@ function ENT:SetHideLeft()
 	self.BoneCallback = self:AddCallback( "BuildBonePositions", function( hands, numbones )
 		local vsf = hands:GetHandsIndex() == 0 and "" or self:GetHandsIndex()
 		local wep = hands:GetOwner():GetActiveWeapon()
-		if(IsValid(wep) and wep["ViewModelHideLArm"..vsf])then
+		if(IsValid(wep) and (wep["ViewModelHideLArm"..vsf] or true))then
 			
 		local pfx = "L"
 		local bone = hands:LookupBone("ValveBiped.Bip01_"..pfx.."_UpperArm")
@@ -93,6 +93,7 @@ function ENT:SetHideLeft()
 end
 
 function ENT:Think()
+	self:SetHideLeft()
 end
 
 function ENT:AttachToViewmodel( vm )

@@ -84,6 +84,8 @@ function SWEP:GetViewModelPosition(pos, ang)
     pos = pos + ang:Forward()*-1
     pos = pos + ang:Right()*1
     pos = pos + ang:Up()*-1
+
+    
     local reload = vm:GetSequenceActivity(vm:GetSequence()) == ACT_VM_RELOAD and vm:GetCycle() <= 0.8
     self.RelDropLerp = math.Approach(self.RelDropLerp or 0 , reload and 1 or 0,FrameTime()*0.3)
     --ang:RotateAroundAxis(ang:Right(),-40*self.RelDropLerp)

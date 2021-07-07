@@ -337,6 +337,8 @@ local function LoadGuns()
             SWEP.AltViewmodelIndex = 2
             SWEP.ViewModel2 = SWEP.ViewModel
             SWEP.ViewModelHideLArm = true 
+            SWEP.ViewModelHideLArm1 = true 
+            
             SWEP.ViewModelHideLArm2 = true  
             
             SWEP.ViewModelFlip2 = not SWEP.ViewModelFlip

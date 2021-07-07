@@ -22,7 +22,7 @@ end
 function wb:Deploy()
 	return hook.Run( "OnWeaponDeploy", self:GetOwner(), self ) or true
 end
-end)
+end) 
 
 
 
@@ -61,31 +61,25 @@ function pm:GetNumHands()
 end
 
 hook.Add("OnWeaponDeploy","SetupViewmodels",function(ply,wep)
-    for vmid = 0,2 do
+
+end)
+
+hook.Add("OnWeaponHolster","SetupViewmodels",function(ply,wep,new)
+
+end)
+
+hook.Add("PlayerPostThink","FixupVMs",function(ply)
+    local wep= ply:GetActiveWeapon()
+    for vmid = 1,2 do
         local vst = vmid == 0 and "" or vmid
         local vmodel = wep["ViewModel"..vst] or (vmid == 0 and new:GetWeaponViewModel())
         if(vmodel == false)then vmodel = nil end
         if(vmodel == "")then vmodel = nil end
-        ply:GetViewModel( vmid ):SetWeaponModel( vmodel or "", vmodel != "" and wep )
-    end
-end)
-
-hook.Add("OnWeaponHolster","SetupViewmodels",function(ply,wep,new)
-    if(IsValid(new))then
-    for vmid = 1,2 do
-        ply:GetViewModel( vmid ):SetWeaponModel( "" )
-    end
-    end
-end)
-
-hook.Add("PlayerSwitchWeapon","FixupVMs",function(ply,old,new)
-    for vmid = 1,2 do
-        local vst = vmid == 0 and "" or vmid
-        local vmodel = new["ViewModel"..vst] or (vmid == 0 and new:GetWeaponViewModel()) or ""
-        if(vmodel == nil)then vmodel = "" end
-        if(vmodel == false)then vmodel = "" end
-        print(vmid,new,vmodel)
-        ply:GetViewModel( vmid ):SetWeaponModel( vmodel , NULL )
+        local wm = vmodel != "" and wep
+        if(ply:GetViewModel( vmid ).LastWeaponModel != wm)then
+        ply:GetViewModel( vmid ):SetWeaponModel( vmodel or "", wm )
+        ply:GetViewModel( vmid ).LastWeaponModel =  wm
+        end
     end
 
 end)

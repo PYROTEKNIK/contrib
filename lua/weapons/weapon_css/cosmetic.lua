@@ -4,7 +4,7 @@ SWEP.SubMatID = 1
 SWEP.SubMatIDWorld = 1
 
 function SWEP:GetHighlightColor()
-    local ran = HSVToColor(math.Rand(0,360),math.Rand(1,1),math.Rand(1,1))
+    local ran = HSVToColor(math.Rand(0,360),math.Rand(0.7,0.9),math.Rand(1,1))
     ran = Color(ran.r,ran.g,ran.b)
     self.BaseColor = self.BaseColor or ran:ToVector()
     local boost = Vector(1, 1, 1) * self.BoostBase
@@ -20,7 +20,7 @@ MatGen["livery"] = function(ent,newmat,copytable)
 
     newmat:SetVector("$color2", ent:GetHighlightColor())
     newmat:SetUndefined("$bumpmap")
-    newmat:SetTexture("$detail","guncustomization/pattern_heart")
+    newmat:SetTexture("$detail","guncustomization/pattern_camo")
     newmat:SetUndefined("$phong")
     newmat:SetInt("$detailscale",1)
     newmat:SetFloat("$detailblendfactor",0.8)
