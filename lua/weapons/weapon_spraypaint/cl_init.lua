@@ -137,7 +137,6 @@ function SWEP:GetPreviewMat(decal)
 
     if (SPRAYPAINT_DECALPREVIEW_CACHE[decal] == nil) then
         local t = mat:GetString("$basetexture")
-        print(t," is the texture for "..decalmat)
         local f = mat:GetFloat("$frame")
         local sc = mat:GetFloat("$decalscale")
         local c = mat:GetVector("$color2")
@@ -162,7 +161,6 @@ function SWEP:GetPreviewMat(decal)
         params["$vertexcolor"] = 1
         params["$vertexalpha"] = 1
         params["$decalscale"] = sc
-        print("generated preview material for",decal, "using "..t)
         SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. SPRAYPAINT_DECALPREVIEW_KEY, shader, params)
     end
 
