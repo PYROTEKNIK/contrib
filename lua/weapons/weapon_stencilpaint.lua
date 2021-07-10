@@ -21,12 +21,14 @@ SWEP.PaintDelay = 0.25
 SWEP.SlotPos = 101
 SWEP.WindowTitle = "Pick a Stencil (You can use your keyboard to choose)"
 
-if (CLIENT) then
-    CreateClientConVar("spraypaint_stencil", "stencil_decal27", true, true, "decal to spray from the can")
-end
+
 
 SPRAYPAINT_STENCILS = {}
 SPRAYPAINT_STENCILS_WHITELIST = {}
+hook.Add("Initialize","stencil_register",function()
+    if (CLIENT) then
+        CreateClientConVar("spraypaint_stencil", "stencil_decal27", true, true, "decal to spray from the can")
+    end
 
 for i = 1, 40 do
     local dname = "stencil_decal" .. i
@@ -52,6 +54,8 @@ SPRAYPAINT_STENCILS_WHITELIST["Nought"] = true
 SPRAYPAINT_STENCILS_WHITELIST["Cross"] = true
 SPRAYPAINT_STENCILS_WHITELIST["Eye"] = true
 SPRAYPAINT_STENCILS_WHITELIST["Smile"] = true
+end)
+ 
 SWEP.DecalSet = "SprayPaintStencils"
 SWEP.MenuColumns = 8
 SWEP.ConVar = "spraypaint_stencil"

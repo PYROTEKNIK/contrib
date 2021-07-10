@@ -33,6 +33,8 @@ SWEP.BounceWeaponIcon = false
 SWEP.RenderGroup = RENDERGROUP_OPAQUE
 SWEP.PaintDelay = 1 / 30
 SWEP.MaxMovementDistance = 128 -- Maxmimum distance the player can move while drawing before it's prevented
+
+hook.Add("Initialize","spraypaint_register",function()
 SPRAYPAINT_DECALS_WHITELIST = {}
 SPRAYPAINT_DECALS = {}
 
@@ -46,10 +48,14 @@ for i = 1, 27 do
     list.Set("SprayPaintDecals", i, dname)
 end
 
+end)
+
 SWEP.DecalSet = "SprayPaintDecals"
 SWEP.MenuColumns = 9
 SWEP.ConVar = "spraypaint_decal"
 SWEP.WindowTitle = "Spraypaint Color"
+
+
 
 function SWEP:SetupDataTables()
     self:NetworkVar("String", 0, "LastDecal")
@@ -201,15 +207,16 @@ function SWEP:GetDecalColor(decal)
     if (not IsValid(ply)) then return Vector(1, 1, 1), 1 end
     decal = decal or self:GetCurrentDecal()
     if (SPRAYPAINT_DECALCOLOR_CACHE[decal] and SPRAYPAINT_DECALSIZE_CACHE[decal]) then return SPRAYPAINT_DECALCOLOR_CACHE[decal], SPRAYPAINT_DECALSIZE_CACHE[decal] end
-    local mat = Material(util.DecalMaterial(decal))
+    local mat = Material(util.DecalMaterial(decal) or "")
     local maintex
 
-    if (mat:GetTexture("$basetexture")) then
-        maintex = mat:GetTexture("$basetexture")
-    end
+    
 
     --shit seems to crash if you try to access width
     if (mat) then
+        if (mat:GetTexture("$basetexture")) then
+            maintex = mat:GetTexture("$basetexture")
+        end
         local texwidth = mat:Width()
         local size = texwidth * tonumber(mat:GetFloat("$decalscale") or 1)
         size = size or 1
