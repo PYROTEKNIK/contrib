@@ -129,7 +129,7 @@ SPRAYPAINT_DECALPREVIEW_CACHE = {}
 function SWEP:GetPreviewMat(decal)
     local ply = self:GetOwner()
     decal = decal or self:GetCurrentDecal()
-    local decalmat = util.DecalMaterial(decal)
+    local decalmat = SPRAYPAINT_MATLOOKUP[decal] or util.DecalMaterial(decal)
     if (not decalmat) then return Material("___error") end
     local mat = Material(decalmat) --let's create a new material
     if (not mat or (mat and mat:IsError())) then return Material("___error") end
@@ -160,7 +160,7 @@ function SWEP:GetPreviewMat(decal)
         params["$vertexcolor"] = 1
         params["$vertexalpha"] = 1
         params["$decalscale"] = sc
-        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. "decalpreviewmat", shader, params)
+        SPRAYPAINT_DECALPREVIEW_CACHE[decal] = CreateMaterial(decal .. "decalpreviewmat1", shader, params)
     end
 
     return SPRAYPAINT_DECALPREVIEW_CACHE[decal]
@@ -176,7 +176,7 @@ hook.Add("PreDrawEffects", "DrawSprayPaintHUD", function()
 end)
 
 function SWEP:DrawSpraypaintReticle()
-    if (CurTime() < self:GetNextPrimaryFire()) then return end
+    if (CurTime() < self:GetNextPrimaryFire() - FrameTime()) then return end
     local trace = self:GetTrace()
     if (not trace.Hit or trace.HitPos:Distance(EyePos()) > self:GetPaintDistance()) then return end
     if (trace.HitSky) then return end
