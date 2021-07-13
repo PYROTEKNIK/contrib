@@ -75,7 +75,7 @@ function ENT:Think()
             if(!self:GetTaped())then
                 notify = "Must be taped to activate."
             end
-            local expired = LatestNotificationTime + 4 < CurTime()
+            local expired = (LatestNotificationTime or 0) + 4 < CurTime()
 
             if ((LatestNotification ~= notify and expired)) then
                 LocalPlayerNotify(notify)
@@ -213,7 +213,7 @@ hook.Add("Move", "BouncePad_Override", function(ply, mv)
 end)
 
 hook.Add("GetFallDamage", "BouncePadNoCrunch", function(ply, speed)
-    if (IsValid(ply:GetGroundEntity()) and ply:GetGroundEntity():GetClass() == "boostpad" or ply.FeetAreBouncePadFlavored) then
+    if (IsValid(ply:GetGroundEntity()) and ply:GetGroundEntity():GetClass() == "prop_launchpad" or ply.FeetAreBouncePadFlavored) then
         ply.FeetAreBouncePadFlavored = nil
         return 0
     end
