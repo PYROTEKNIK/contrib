@@ -441,8 +441,26 @@ function PLAYER:PerformLayout()
     self.Avatar:CenterVertical()
 end
 
+TEAMC = {}
+local function GetTeamColor(tm)
+    if(TEAMC[tm])then return TEAMC[tm] end
+
+    local color = team.GetColor(tm)
+    local h,s,v = ColorToHSV(color)
+    local ucol = HSVToColor(h,s,v*0.5)
+    TEAMC[tm] = ucol
+    return TEAMC[tm]
+end
+
+
 function PLAYER:Paint(w, h)
     surface.SetDrawColor(BrandColorGrayDark)
+    if(IsValid(self.Player) and self.Player:Team() != TEAM_UNASSIGNED)then
+        
+        surface.SetDrawColor(GetTeamColor(self.Player:Team()))
+    end
+
+
     surface.DrawRect(0, 0, self:GetSize())
     surface.SetDrawColor(255, 255, 255, 255)
     local xp = 364
