@@ -1,0 +1,5 @@
+VertexLitGeneric
+{
+	$basetexture "models/pyroteknik/fishingpole"
+	"$bumpmap" "models/pyroteknik/fishingpole_normal"
+}
