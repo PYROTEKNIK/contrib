@@ -11,7 +11,7 @@ local vector_one = Vector(1, 1, 1)
 
 function ENT:Initialize()
     if SERVER then
-        self:SetModel("models/props_junk/Shoe001a.mdl")
+        self:SetModel("models/pyroteknik/fishing_bobber.mdl")
         self:PhysicsInit(SOLID_VPHYSICS)
 
         //self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
@@ -19,8 +19,10 @@ function ENT:Initialize()
         self:SetSolid(SOLID_VPHYSICS)
         local phys = self:GetPhysicsObject()
         if IsValid(phys) then
-            //phys:SetMass(6)
-            phys:SetMaterial("flesh")
+            phys:SetMass(6)
+            phys:SetMaterial("ice")
+            phys:SetBuoyancyRatio(1)
+           
         end
 
 
@@ -33,6 +35,7 @@ function ENT:SetupDataTables()
     self:NetworkVar("Entity", 0, "Pole")
     self:NetworkVar("Vector",0,"Pull")
     self:NetworkVar("Entity",1,"Fish")
+    
 end
 
 function ENT:InWater()
@@ -57,9 +60,11 @@ function ENT:Think()
     end
 
     if SERVER then 
-    local phys = self:GetPhysicsObject()
-    phys:SetDamping(inwater and 6 or 2,0.5)
-
+        local phys = self:GetPhysicsObject()
+        phys:SetDamping(inwater and 6 or 2,0.5)
+        self:SimulateRope(0.1)
+        self:NextThink(CurTime())
+        return true
     end
 
     if CLIENT then 
@@ -78,7 +83,7 @@ function ENT:Think()
 
         self.SmoothVel = LerpVector(0.05,self.SmoothVel or nvel,nvel)
 
-
+        self:SimulateRope(FrameTime())
         local av = self:GetPos()*1
         local bv = self:GetPos()*1
 
@@ -128,98 +133,286 @@ hook.Add("PostDrawOpaqueRenderables","FishingBobberDrawStrings",function(dep,sky
     end
 end)
 
+function ENT:GetHookedEntity()
+    local fsh = self:GetFish()
+    if IsValid(fsh) then
+        if !IsValid(self.HookConstraint) then
+            return nil
+        end
+    end    
+    return fsh
+end
+
+
+function ENT:Hook(ent,bone)
+    
+    local physobj 
+
+    local physbone = ent:TranslateBoneToPhysBone(bone) or 0
+
+    physbone = util.IsValidPhysicsObject( ent, physbone ) and physbone or 0
+
+
+    if physbone then
+        physobj = ent:GetPhysicsObjectNum(physbone)
+    else
+        bone = 0
+        physobj = ent:GetPhysicsObject()
+    end
+    print(ent,bone,physobj)
+
+    if IsValid(self.HookConstraint) then
+        if IsValid(self:GetFish()) then
+            print("Fishing bobber tried to hook entity while already hooked!")
+            return 
+        else
+            self.HookConstraint:Remove()
+            self.HookConstraint = nil
+            self:SetFish(nil)
+        end 
+    end
+
+    if IsValid(ent) then
+        if IsValid( self.HookConstraint) then self.HookConstraint:Remove() end
+        if IsValid( ent.HookConstraint) then ent.HookConstraint:Remove() end
+
+        timer.Simple(0,function()
+            if ent:GetCaught() then return end
+            self:EmitSound( Sound( "Flashbang.Bounce" ) )
+            self:SetPos(ent:GetBonePosition(bone))
+            self:SetAngles(ent:GetAngles())
+            self.HookConstraint = constraint.Weld( self, ent, 0, physbone or 0 , 100000000, true )
+            ent.HookConstraint = self.HookConstraint
+            ent.LastHookTouched = self
+            self:SetFish(ent)
+        end)
+    end
+end
+
+function ENT:Unhook()
+    if IsValid(self:GetFish())then
+        local fish = self:GetFish()
+
+        constraint.RemoveAll(self)
+        if IsValid(fish.HookConstraint) then fish.HookConstraint:Remove() fish.HookConstraint = nil end
+        if IsValid(self.HookConstraint) then self.HookConstraint:Remove() self.HookConstraint = nil end
+        fish.LastHookTouched = nil
+        self:SetFish(NULL)
+    end
+end
+
+
+function ENT:CornerLineSegment(a,b)
+
+    local tr = {}
+    tr.start = a
+    tr.endpos = b
+    tr.filter = self
+    tr.mask = msk
+    local trace = util.TraceLine(tr)
+
+    local tr2 = {}
+    tr2.start = b
+    tr2.endpos = a
+    tr2.filter = self
+    tr2.mask = msk
+    local trace2 = util.TraceLine(tr2)
+    
+    local plan = Vector(0,4,3)
+
+    function pon(rp,rd,pp,pn,color)
+        local p = util.IntersectRayWithPlane( rp,rd, pp, pn )
+
+        local cc = p and color or Color(100,100,100,color.a)
+        return p 
+    end
+
+    if trace.Hit and trace2.Hit and !trace.StartSolid and !trace2.StartSolid then  
+        local na = trace.HitNormal 
+        local nb = trace2.HitNormal 
+        --pos = trace.HitPos
+        if (na + nb):Length() > 0.01 then
+            local hp1 = trace.HitPos
+            local hn1 = trace.HitNormal
+            local hd1 = trace.Normal
+            
+            local hp2 = trace2.HitPos
+            local hn2 = trace2.HitNormal
+            local hd2 = trace2.Normal
+
+            local ntp = pon( hp1 ,hd1 * 10000, hp2, hn2,Color(128,0,255,4) )
+            if ntp then
+                
+                 --debugoverlay.Cross(ntp,4,0,Color(0,255,128),true)
+                local ntp2 = pon(  ntp, hn1*10000, hp1, hn1 ,Color(255,128,0,4) )
+                if ntp2 then
+                    --debugoverlay.Box(ntp2,-Vector(1,1,1)*4,Vector(1,1,1)*4,0,Color(255,255,255,4))
+                    local bn = (hn1+hn2):GetNormalized()
+                    return ntp2 + bn, bn 
+                end
+            end
+        end
+        return trace.HitPos + trace.HitNormal
+    end
+
+end
+
+function ENT:GetPullVector()
+    local pole =  self:GetPole()
+    local ply = pole:GetOwner()
+    local tp = IsValid(pole) and pole:GetPoleTip()
+    local sp = self:GetPos()
+
+    tp = self.StringSim and self.StringSim[1] or tp
+  
+
+
+    return (tp - sp):GetNormalized()
+end
+
+function ENT:SimulateRope(delta)
+    delta = delta or 0
+    local pole =  self:GetPole()
+    local ply = pole:GetOwner()
+    
+    local vb = pole:GetPoleTip() 
+    --va = ply:WorldSpaceCenter()
+    local va = self:GetPos()
+    local vd = math.abs(va.z - vb.z) --z distance between both ends, used for sag offset
+    local tns = pole:GetTension()
+    local tnsp = math.max(tns*-1,0) --sag ratio
+
+
+
+    local dist = va:Distance(vb)
+
+    local slack = math.max(0,pole:GetReelLength() - dist)
+
+    local width = 0.25
+
+    local dang = 0
+    local dheight
+    local lastpos = va
+    local linec = Color(255,255,255,230)
+    local fancy = true
+    
+
+
+    local msk =  CONTENTS_SOLID + CONTENTS_GRATE + CONTENTS_WATER
+    local re = pole:GetReelLength()
+
+    local splines = {}
+    local function samp(along)
+
+        return LerpVector(along,va,vb)
+    end
+
+
+    
+
+
+    local solved = false
+    local div = math.Clamp(math.floor(dist/20),3,SERVER and 4 or 5)
+    local simpos = va*1
+    
+    
+    self.StringSim = self.StringSim or {}
+    for i=1,div do //subdivide
+        local a = self.StringSim[i] or va
+        local b = self.StringSim[i-1] or va
+        local c = self.StringSim[i+1] or vb
+        local ca = self:CornerLineSegment(b,c)
+        local ofs = Vector()
+        if ca then 
+            self.StringSim[i] = ca
+        else
+            self.StringSim[i] = self.StringSim[i] or vb
+            ofs = LerpVector(0.5,b,c) - self.StringSim[i]
+        end
+        
+        ofs = ofs + Vector(0,0,-0.025)*tnsp
+
+        local tr2 = {}
+        tr2.start = self.StringSim[i]
+        tr2.endpos = self.StringSim[i] + ofs
+        tr2.filter = self
+        tr2.mask = MASK_SOLID
+        local trace = util.TraceLine(tr2)
+        if trace.Hit then
+            self.StringSim[i] = trace.HitPos
+        else
+            self.StringSim[i] = self.StringSim[i] + ofs
+        end
+
+    end
+
+
+    self.StringSim[div+1] = vb
+
+
+    if self.StringSim[div+1] then table.remove(self.StringSim,div+1) end
+
+
+
+    for k,a in pairs(self.StringSim)do
+        a = a or va
+        local b = self.StringSim[k+1] or vb
+        debugoverlay.Line(a,b,0,Color(0,255,64),false)
+        debugoverlay.Line(a,b,0,Color(0,0,255),true)
+        debugoverlay.Box(a,Vector(1,1,1)*-0.25,Vector(1,1,1)*0.25,delta,Color(255,255,64,0),true)
+    end
+
+    
+end
+
 
 function ENT:DrawString()
 
     local pole =  self:GetPole()
     local ply = pole:GetOwner()
     
-    local va = pole:GetPoleTip(ply:ShouldDrawLocalPlayer()) 
-    local vb = self:GetPos()
+    local vb = pole:GetPoleTip() 
+    --va = ply:WorldSpaceCenter()
+    local va = self:GetPos()
     local vd = math.abs(va.z - vb.z) --z distance between both ends, used for sag offset
     local tns = pole:GetTension()
     local tnsp = math.max(tns*-1,0) --sag ratio
 
-    self.PlayerLag = LerpVector(0.01,self.PlayerLag or Vector(), ply:GetVelocity())
 
-    local sa = self.PlayerLag*-0.1 --bend rod end away from player movement
-
-    local sv = self:InWater() and pole:GetPullVector() or (-self.LagVector) --bend line behind bobber movement, towards rod if in water
-    local sb = -(sv:GetNormalized()*math.min(100,sv:Length())) --clamp vector to 100 length
     local dist = va:Distance(vb)
 
+    local slack = math.max(0,pole:GetReelLength() - dist)
 
-
-    local units = math.Clamp(math.ceil(dist/8),8,30)
     local width = 0.25
-    if tns >= 0 then 
-        units = 1
-    end
+
 
     render.SetColorMaterial()
-    render.StartBeam( units+1 )
+
     local dang = 0
     local dheight
     local lastpos = va
-    local ul = dist / units
     local linec = Color(255,255,255,230)
     local fancy = true
-    for i=0,units do
-        local tm = i/units
-        
-        local sec = LerpVector(tm,va,vb)
-        local arc = math.cos( (tm-0.5)*math.pi )
-        local amul = math.pow(1-tm,4)*1--(tm)
-        local mid = 1-math.pow(math.abs(tm-0.5)*2,2)
-        local sag = vd*mid*0.5*tnsp
-        --cc.g = mid*255
-        --cc.r = arc*255
-       
-        
-
-        local vsec = LerpVector(tm,sa,sb) * arc * tnsp
-        vsec = vsec + Vector(0,0,-sag)
+    
 
 
-
-        local pos =  sec + vsec
-
-        if fancy then 
-            local tr = {}
-            tr.start = pos*1
-            tr.start.z = math.max(pos.z,lastpos.z + 16)
-            tr.endpos = pos*1
-            tr.endpos.z = math.min(pos.z,lastpos.z)
-            tr.filter = {self,pole}
-            tr.mask = CONTENTS_SOLID + CONTENTS_WATER
-            local trace = util.TraceLine(tr)
-            --debugoverlay.Line(tr.start,tr.endpos,0,Color(0,255,0),true)
-            if trace.Hit then
-                pos = trace.HitPos + trace.HitNormal*width*0.5
-                dheight = pos.z
-                dang = 1
-                --debugoverlay.Box(pos,Vector(-1,-1,-1),Vector(1,1,1),0,Color(0,255,0,16),true)
-            else
-                if dheight and dang and dang > 0 then
-                    pos.z = Lerp(math.pow(dang,2),pos.z,dheight)
-                    dang = dang - (ul / 100)
-                    
-                    if dang <= 0 then dang = nil dheight = nil end
-                end
-            end
-        end
-
-        lastpos= pos*1
-       
-
-        local col = Color(linec.r,linec.g,linec.b,linec.a)
-        local w = width*1 / math.max(1,1+(mid/2)*math.max(0,tns))
-
-        
+    local msk =  CONTENTS_SOLID + CONTENTS_GRATE + CONTENTS_WATER
+    local re = pole:GetReelLength()
 
 
+    local subdv = 2
+    local strg = self.StringSim
+    local segm = table.Count(strg)
+    render.StartBeam( segm+2 )
 
-        render.AddBeam( pos , w, 0, col )
+    render.AddBeam( va  , width, 0, linec )
+
+    for si,b in pairs(strg)do
+
+            render.AddBeam( b  , width, 0, linec )
     end
+    render.AddBeam( vb  , width, 0, linec )
+
     render.EndBeam()
+
 end

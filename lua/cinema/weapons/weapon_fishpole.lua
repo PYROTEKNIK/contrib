@@ -8,6 +8,7 @@ SWEP.DrawAmmo = true
 SWEP.m_WeaponDeploySpeed = 9
 SWEP.ViewModel = "models/pyroteknik/fishingpole.mdl"
 SWEP.WorldModel = "models/pyroteknik/fishingpole.mdl"
+SWEP.BobberModel = "models/pyroteknik/fishing_bobber.mdl"
 SWEP.ViewModelFlip = false
 SWEP.ViewModelFOV           = 90
 SWEP.Spawnable = true
@@ -22,10 +23,13 @@ SWEP.Secondary.Ammo = "none"
 SWEP.Instructions = "Catch a fish"
 
 
-SWEP.ReelForce = 7500 //force to pull bobber while reeling
+SWEP.ReelForce = 10000 //force to pull bobber while reeling
 SWEP.MinCastForce = 200 //Force to throw bobber at lowest hold time
 SWEP.MaxCastForce = 2000 //Force to throw bobber at highest hold time
 SWEP.MaxCastTime = 2 //highest hold time before force stops increasing
+SWEP.MaxLineLength = 2000
+SWEP.CatchLen = 48
+SWEP.SnapTension = 25
 
 function SWEP:Initialize()
 end
@@ -33,6 +37,8 @@ end
 function SWEP:Equip(ply)
 
 end
+
+
 
 function SWEP:SetupDataTables()
     self:NetworkVar("Entity",0,"Bobber")
@@ -44,6 +50,11 @@ function SWEP:SetupDataTables()
     
     self:NetworkVar("Bool",1,"SwingMode")
     
+end
+
+function SWEP:GetLineRatio()
+    return 1-(self:GetReelLength() / self.MaxLineLength)
+
 end
 
 
@@ -65,31 +76,43 @@ function SWEP:GetLineLength()
 end
 SWEP.LineStretch = 16
 
-function SWEP:GetTension()
+
+function SWEP:GetTension(pos)
     if !self:IsCast() then return 0 end
-
-    return (self:GetLineLength() - self:GetReelLength()) / self.LineStretch
+    return (self:GetBobber():GetPos():Distance(pos or self:GetPoleTip()) - self:GetReelLength()) / self.LineStretch
 end
-
 
 function SWEP:GetPullVector()
     if !self:IsCast() then return Vector() end
+
+    if IsValid(self:GetBobber()) then
+        return self:GetBobber():GetPullVector()
+    end
     return self:GetPoleTip() - self:GetBobber():GetPos() 
 end
 
 function SWEP:GetPull()
     if !self:IsCast() then return nil end
-
     return 0
 end
 
+function SWEP:IsHooked()
+    return IsValid(self:GetHookedEntity())
+end
+
+function SWEP:GetHookedEntity()
+    local ent = self:GetBobber()
+    local hk
+    if IsValid(ent) and ent.GetFish then 
+        return ent:GetFish()
+    end
+end
 
 
 function SWEP:PrimaryAttack()
 
 
 end
-
 
 
 function SWEP:GetPullbackValue()
@@ -125,6 +148,23 @@ end
 
 
 function SWEP:Reload()
+
+    local cur_len = self:GetLineLength()
+    if SERVER and reel and reelhold and IsValid(bobber) and IsValid(hooked) and cur_len <= self.CatchLen then
+        local fish = hooked
+        fish:GetPhysicsObject():ApplyForceOffset(vec*4000,bobber:GetPos())
+        fish:SetCaught(true)
+        bobber:Unhook()
+        local vec = self:GetPullVector()
+        vec.z = 1
+        vec:Normalize()
+    
+
+        bobber:EmitSound( Sound( "Flashbang.Bounce" ) )
+        return
+    end
+
+
     if SERVER and self:IsCast() then
         self:RemoveBobber()
     end
@@ -138,7 +178,9 @@ function SWEP:Think()
     local casting = self:IsCasting()
     local reel = ply:KeyDown(IN_ATTACK)
     local reelhold = ply:KeyDown(IN_ATTACK2)
-
+    local hooked = self:GetHookedEntity()
+    local bobber = self:GetBobber()
+    
     local holdtype = "passive"
 
     local pb = self:GetPullbackValue()
@@ -156,12 +198,6 @@ function SWEP:Think()
             self:SetSwingStart(CurTime())
             self:SetSwingPower(0)
         end
-
-
-
-
-
-
 
         if self:GetSwingMode() then
             local pb = self:GetPullbackValue()
@@ -200,7 +236,7 @@ function SWEP:Think()
 
     
     local min = 32
-    local max = 1000
+    local max = self.MaxLineLength
     if cast then 
         local reel_len = self:GetReelLength()
         local cur_len = self:GetLineLength()
@@ -215,39 +251,71 @@ function SWEP:Think()
         local pv = self:GetPullVector():GetNormalized()
         self.LineClick = self.LineClick or 0
         local tens = self:GetTension()
-        if self:GetReelHeld() or cur_len >= 1000 then
-            if SERVER then 
-                local ra = pv:Angle()
-                local pvw = WorldToLocal(phys:GetVelocity(),Angle(),Vector(),ra)
-                local ci = pvw:Length()
-                pvw.x = math.max(pvw.x,0)
-                pvw:Normalize()
-                pvw = pvw*ci
-                pvw.x = math.max(pvw.x,0)
-                local pvn = LocalToWorld(pvw,Angle(),Vector(),ra)
-                phys:SetVelocity(pvn) //halt velocity away from rod.
-            end
+        --tens = math.min(tens,3)
+        //calculate how tension force is applied between bobber and player
+        local ndif = (newline-reel_len)
+        local ptens = tens
+        local massratio = 0
+        local pmass = SERVER and ply:GetPhysicsObject():GetMass() or 85
+        local reelforce = self.ReelForce
+        local fish = bobber:GetFish()
 
+
+        if ply:OnGround() then
+            if ply:Crouching() then 
+                pmass = pmass * 2 
+            end
+        else
+            
+            pmass = pmass / 2 
+        end
+        
+        local fmass = 1
+
+        if SERVER and IsValid(bobber) and IsValid(bobber:GetFish()) then 
+            fmass = bobber:GetFish():GetPhysicsObject():GetMass()
+        end
+        if IsValid(fish) then --modulate fish pull by 
+            fmass = fmass * Lerp(fish:GetInput():Length(),0.25,1)
+        end
+    
+
+        massratio = fmass / pmass
+
+        local plypull = math.max(massratio,0)
+        local fshpull = math.max(1-massratio,0)
+        local tensforce = (pmass + fmass) * tens
+        
+        
+        if self:GetReelHeld() or cur_len >= self.MaxLineLength or cur_len < self.CatchLen then
 
             if SERVER and reel then //pull bobber to match line tension
-
                 if cur_len > min then 
-                    local pwr = self.ReelForce*FrameTime()
-                    phys:ApplyForceCenter(pv*pwr)
-                    newline = math.max(math.min(newline,cur_len),min)
-                
+                    local pwr = reelforce*FrameTime()
+                    phys:ApplyForceCenter(pv*pwr*fshpull)
+                    ply:SetVelocity(-pv*pwr*15*plypull)
                 end
             end
 
-            local pullm = math.Remap(cur_len,min-5,min,1,0)
+            
+            if SERVER then //pull bobber to match line tension
+                if cur_len > min then 
+                    local pwr = tensforce*FrameTime() 
+                    phys:ApplyForceCenter(pv*pwr*fshpull)
+                    ply:SetVelocity(-pv*pwr*15*plypull)
+                    newline = math.max(math.min(newline,cur_len),min)
+                end
+            end
+
+            local pullm = math.Clamp(tens,0,10)*fshpull
 
             if SERVER and dif > -1 and pullm > 0 then 
-                phys:ApplyForceCenter(pv*100*pullm)
+                phys:ApplyForceCenter(pv*phys:GetMass()*pullm)
             end
             if dif < 0 and reel then 
                 local pull = math.Clamp(dif,FrameTime()*20,0)
-                
                 newline = newline + pull
+
                 ply:SetAnimation(PLAYER_RELOAD)
             end
 
@@ -260,25 +328,15 @@ function SWEP:Think()
 
         end
 
-        newline = math.Clamp(newline,5,1000)
+        newline = math.Clamp(newline,5,self.MaxLineLength)
         if newline != reel_len then
             self:SetReelLength(newline)
         end
 
         //don't modify newline after this point
 
-        local ndif = (newline-reel_len)
-        local tens = self:GetTension()
-        local ptens = tens - 2
 
-        if (reelhold or newline >= 1000) and newline > 100 and (ptens > 0) then
-
-
-            local pull = math.Clamp(ptens,0,5)
-            ply:SetVelocity(-pv*(pull)*80)
-        end
-
-        
+      
 
         if CLIENT then 
             local rl = self:GetReelLength()
@@ -316,6 +374,7 @@ function SWEP:Think()
     if self:GetHoldType() != holdtype then
         self:SetHoldType(holdtype)
     end
+
 end
 
 function SWEP:DrawHUD()
@@ -332,11 +391,75 @@ function SWEP:DrawHUD()
 
 
     draw.RoundedBox( 8, gx,gy,gw,gh, bg )
+
+
+
     draw.SimpleText( "line: ", "Trebuchet24", gx+64, gy + gh*0.25, color_white,TEXT_ALIGN_RIGHT,TEXT_ALIGN_CENTER )
     draw.SimpleText( "cur: ", "Trebuchet24", gx+64, gy + gh*0.75, color_white,TEXT_ALIGN_RIGHT,TEXT_ALIGN_CENTER )
 
     draw.SimpleText( string.Comma(math.Round(reel / 52.49344,2)).."m", "Trebuchet24", gx+64, gy + gh*0.25, color_white,TEXT_ALIGN_LEFT,TEXT_ALIGN_CENTER )
     draw.SimpleText( string.Comma(math.Round(line / 52.49344,2)).."m", "Trebuchet24", gx+64, gy + gh*0.75, color_white,TEXT_ALIGN_LEFT,TEXT_ALIGN_CENTER )
+
+    local bg = Color(4,4,4,128)
+    local fg = Color(255,0,0,255)
+    local v = self:GetPullbackValue()
+    if self:GetSwingPower() != 0 then
+        v = 1-v
+    end
+
+    local gw = 256
+    local gh = 32
+
+    local c = 8
+    local gx = ScrW()/2 - gw/2 - c*2
+    local gy = ScrH() - gh - c*2
+
+    if self:IsCast() then
+        v = 1
+        fg = Color(0,64,128)
+    end
+
+
+
+
+
+
+
+    draw.RoundedBox( c*2, gx-c,gy-c,gw+c*2,gh+c*2, bg )
+
+    draw.RoundedBox( c, gx,gy,gw*v,gh, fg )
+    
+    if self:IsCast() then
+        local bs = c
+        local fshx = gx + gw * (1-self:GetLineRatio())
+        
+        local tns = self:GetTension()
+        if tns > 0 then
+            tns = tns/self.SnapTension
+        end
+        if tns < 0 then
+            tns = 0
+        end
+
+        local pullx = fshx + tns
+        
+        local pg = Color(255,0,0)
+        local pw = Lerp(math.pow(tns,2),bs,bs*8)
+        local ph = gh * Lerp(1-tns,0,1)
+
+        draw.RoundedBox( 6, pullx - pw/2 + (tns)*pw*0.5,gy + gh/2 - ph/2,pw,ph, pg )
+
+        
+        local cg = Color(0,200,0)
+        draw.RoundedBox( 4, fshx - bs/2,gy,bs,gh, cg )
+        
+    
+    
+
+    end
+
+
+
 
 end
 
@@ -352,11 +475,13 @@ function SWEP:Cast(force)
         local bobber = ents.Create("fishing_bobber")
         assert(bobber,"bobber spawn fail")
         self:SetReelLength(0)
+
         bobber:SetPos(ply:EyePos() + ply:GetAimVector()*32 + Vector(0,0,16))
         bobber:SetAngles(ply:GetRenderAngles())
         bobber:SetPole(self)
         bobber:SetOwner(ply)
         bobber:Spawn()
+        bobber:SetModel(self.BobberModel)
         bobber:Activate()
 
         local bphys = bobber:GetPhysicsObject()
@@ -373,8 +498,10 @@ end
 function SWEP:RemoveBobber()
     if CLIENT then return end
     local ply = self:GetOwner()
-    if IsValid(self:GetBobber()) then
-        self:GetBobber():Remove()
+    local bobber = self:GetBobber()
+    if IsValid(bobber) then
+        bobber:Unhook()
+        bobber:Remove()
         self:SetBobber(NULL)
     end
 end
@@ -428,7 +555,7 @@ function SWEP:GetPosition(wr)
             return math.ease.OutQuad(r)
         end
         local function retf(r)
-            return math.ease.OutQuad(r)
+            return math.ease.OutQuad(r) 
         end
         local backval = pba
         local fwdval = 0
@@ -462,12 +589,51 @@ end
 
 function SWEP:GetPoleTip()
     local ply = self:GetOwner()
-    local pos,ang = self:GetPosition(w)
-    pos = pos + ang:Forward()*85
-    pos = pos + ang:Up()*0
+    local pos,ang = self:GetPosition(CLIENT and ply:ShouldDrawLocalPlayer())
+        --local pull = self:GetPullVector():Angle()
+    for i=0,self:GetBoneCount()-1 do
+        --print(i,self:GetBoneName(i))
+    end        
+    pos = pos + ang:Forward()*5
+    local rem = 76
+    local bobber = self:GetBobber()
+
+    if CurTime() != self.PoleSimTime then
+        self.PoleSim = nil
+    end
+
+    if self.PoleSim then return self.PoleSim[#self.PoleSim], self.PoleSim end
+    if IsValid(bobber) and CLIENT then
     
+        self.PoleSim = {pos}
+        local tp = bobber:GetPos() 
+        local i = 0
+        local lastpos = pos
+        while rem >= 0 do
+            i = i + 1
+            
+        
+            local sc = math.Clamp(self:GetTension(pos + ang:Forward()*rem)/20,0,i/12)
+            rem = rem - 20
+            local pull = (tp-pos):Angle()
+            ang = LerpAngle(sc,ang,pull)
+            
+            pos = pos + ang:Forward()*20
+            
+            
+            table.insert(self.PoleSim,pos)
+            debugoverlay.Line(pos,lastpos,0,Color(255,0,0),true)
+            lastpos = pos 
+        end
+        self.PoleSimTime = CurTime()
+
+    else
+        pos = pos + ang:Forward()*85
+    end
+
     return pos 
 end
+
 
 function SWEP:SecondaryAttack()
 end
@@ -483,7 +649,84 @@ function SWEP:Deploy()
 
 end
 
+function SWEP:BoneMatrixPoleBend(ent)
+    ent = ent or self
+
+
+
+
+    
+    local matrices = {} --record all local offsets
+    for i=0,ent:GetBoneCount()-1 do
+        --print(i,self:GetBoneName(i))
+        local lmat = ent:GetBoneMatrix(i)
+        local pmat = ent:GetBoneMatrix(ent:GetBoneParent(i))
+        if !pmat then continue end
+        matrices[i] = pmat:GetInverse() * lmat
+    end
+
+    local cache = {}
+    local a,b = 3,7
+
+    local spin = math.pow(self:GetLineRatio(),0.7) * 8000
+    local scale = math.pow(self:GetLineRatio(),0.4) 
+    
+
+    matrices[1]:Rotate(Angle(0,0,-spin))
+
+    local sp = math.Clamp(scale,0,1)
+    local s = Lerp(sp,0.305,1)
+    
+
+    matrices[2]:Scale(Vector(1,s,s))
+
+    matrices[8]:Translate(Vector(math.sin(math.rad(spin/8)),0,Lerp(sp,-2,0)))
+    
+
+    local a,b = 3,7
+
+    local rot = Angle(0,0,0)
+
+    local sim = self.PoleSim
+    
+    if sim then 
+    local sm = 1
+    local smp = ent:GetBoneMatrix(a)
+
+    for i=a,b do
+        
+        local mat = Matrix(ent:GetBoneMatrix(ent:GetBoneParent(i)))
+        if !mat then continue end
+
+        local p1,p2 = self.PoleSim[sm] ,self.PoleSim[sm+1]
+        
+        mat:SetTranslation(p1)
+        if self.PoleSim[sm+1] then 
+            local pa = (p2-p1):AngleEx(Vector(0,0,1))
+            mat:SetAngles(pa)
+            mat:Rotate(Angle(0,0,90))
+        end
+        --mat:Rotate(Angle(yaw,pitch,0))
+        ent:SetBoneMatrix(i,mat)
+        matrices[i] = nil
+        sm = sm + 1
+    end    
+    for k, v in pairs(matrices) do
+        local umat = ent:GetBoneMatrix(ent:GetBoneParent(k))
+        umat:Mul(v)
+        matrices[k] = umat
+        ent:SetBoneMatrix(k, umat)
+    end
+    end
+end
+
+
 function SWEP:BuildBonePositions()
+
+    local ply = self:GetOwner()
+
+
+    self:BoneMatrixPoleBend()
 
 end
 
@@ -522,30 +765,8 @@ function SWEP:PreDrawViewModel(vm,ply,wep)
         --print(i,vm:GetBoneName(i))
     end
     local rot = Angle(0,0,0)
-   
-    local pullang = (-self:GetPullVector()):AngleEx(vm:GetAngles():Up())
-    local _,aa = WorldToLocal(Vector(),pullang,ply:EyePos(),ply:EyeAngles())
-    local m = pull*0.25
-    local yaw = (aa.yaw/10) *m
-    local pitch = (aa.pitch/10) *m
 
-    for i=a,b do
-        local mat = Matrix(matrices[i])
-
-        
-        
-        --mat:Rotate(Angle(yaw,pitch,0))
-        matrices[i] = mat
-        --vm:ManipulateBoneAngles(i,Angle(0,0,0))
-    end
-
-    for k, v in pairs(matrices) do
-        local umat = vm:GetBoneMatrix(vm:GetBoneParent(k))
-        umat:Mul(v)
-        matrices[k] = umat
-        vm:SetBoneMatrix(k, umat)
-    end
-
+    self:BoneMatrixPoleBend(vm)
 
 end
 
